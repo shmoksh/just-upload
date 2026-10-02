@@ -1,7 +1,8 @@
 /* global document, OffscreenCanvas -- the evaluate() callbacks run inside the browser page. */
 // Captures the Chrome Web Store screenshots (1280 × 800) from the real extension, on a
-// neutral demo page, and draws the small promo tile (440 × 280) the store requires.
-// Run `pnpm build` first. Output: docs/store/.
+// neutral demo page, and draws the small promo tile (440 × 280) the store requires. Also
+// draws the README's images: the brand banner and the welcome page, light and dark.
+// Run `pnpm build` first. Output: docs/store/ and docs/images/.
 import { mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
@@ -10,9 +11,11 @@ import { createServer } from 'vite';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const extension = `${root}.output/chrome-mv3`;
 const out = `${root}docs/store/screenshots`;
+const images = `${root}docs/images`;
 const fixture = (name) => `${root}tests/fixtures/${name}`;
 
 await mkdir(out, { recursive: true });
+await mkdir(images, { recursive: true });
 const server = await createServer({
   configFile: `${root}test-site/vite.config.ts`,
   logLevel: 'silent',
@@ -133,6 +136,11 @@ try {
   await welcome.waitForTimeout(3_200);
   await welcome.screenshot({ path: `${out}/5-welcome.png` });
   console.log(`Saved 5 screenshots to ${out}`);
+  // For the README on GitHub's dark theme: the same page in dark mode.
+  await welcome.emulateMedia({ colorScheme: 'dark' });
+  await welcome.reload();
+  await welcome.waitForTimeout(3_200);
+  await welcome.screenshot({ path: `${images}/welcome-dark.png` });
 
   // The small promo tile: the logo, the name and the promise, nothing else, with the name
   // in the display face the extension's pages use.
@@ -155,6 +163,56 @@ try {
   await tile.evaluate(() => document.fonts.ready);
   await tile.screenshot({ path: `${root}docs/store/promo-440x280.png` });
   console.log('Saved the promo tile to docs/store/promo-440x280.png');
+
+  // The README's banner, in the colours of GitHub's light and dark themes, drawn at
+  // twice its size so it stays sharp.
+  const italic = (
+    await readFile(`${root}public/fonts/instrument-serif-italic-latin.woff2`)
+  ).toString('base64');
+  const themes = {
+    light: { paper: '#ffffff', ink: '#0f1a14', muted: '#5c6660', em: '#0e3a26', mark: '#a2ed76' },
+    dark: {
+      paper: '#0d1117',
+      ink: '#f1f4f1',
+      muted: '#979f9a',
+      em: '#a2ed76',
+      mark: 'transparent',
+    },
+  };
+  const browser = await chromium.launch({ channel: 'chromium' });
+  try {
+    const banner = await browser.newPage({
+      viewport: { width: 1280, height: 360 },
+      deviceScaleFactor: 2,
+    });
+    for (const [theme, c] of Object.entries(themes)) {
+      await banner.setContent(`<!doctype html>
+        <style>
+          @font-face{font-family:Serif;src:url(data:font/woff2;base64,${serif}) format('woff2')}
+          @font-face{font-family:Serif;font-style:italic;src:url(data:font/woff2;base64,${italic}) format('woff2')}
+          html,body{margin:0;height:100%;background:${c.paper}}
+          body{display:grid;place-items:center;color:${c.ink};
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+          .lockup{display:flex;align-items:center;justify-content:center;gap:24px}
+          .name{font:400 88px/1 Serif;letter-spacing:-0.02em}
+          .line{margin:26px 0 0;font:400 42px/1 Serif;text-align:center}
+          em{padding:0 .04em;color:${c.em};
+            background:linear-gradient(transparent 64%,${c.mark} 64%,${c.mark} 90%,transparent 90%)}
+          .facts{margin:28px 0 0;font-size:13px;font-weight:600;letter-spacing:.16em;
+            text-transform:uppercase;text-align:center;color:${c.muted}}
+        </style>
+        <body><div>
+          <div class="lockup">${logo.replace('<svg ', '<svg width="88" height="88" ')}<span class="name">Just Upload</span></div>
+          <p class="line">Uploads that <em>just work.</em></p>
+          <p class="facts">Private by design · Free · Works on any website</p>
+        </div></body>`);
+      await banner.evaluate(() => document.fonts.ready);
+      await banner.screenshot({ path: `${images}/banner-${theme}.png` });
+    }
+    console.log('Saved the README banner and welcome images to docs/images');
+  } finally {
+    await browser.close();
+  }
 } finally {
   await context.close();
   await server.close();

@@ -268,11 +268,16 @@ test.describe('changes that need a person to decide', () => {
     });
     expect(photo.buffer.length).toBeGreaterThan(5_000_000);
     await site.setInputFiles('#small', photo);
-    // "Max 500 KB" and nothing about pixels: fewer pixels only with the person's OK.
-    await expect(dialog(site)).toContainText('This image can’t fit 500 KB at full size');
+    // "Max 500 KB" and nothing about pixels: fewer pixels only with the person's OK. The
+    // smaller copy is found first, which takes several seconds on a slow machine.
+    await expect(dialog(site)).toContainText('This image can’t fit 500 KB at full size', {
+      timeout: 30_000,
+    });
     await expect(dialog(site)).toContainText('6000 × 4000 →');
     await dialog(site).getByRole('button', { name: 'Make it smaller' }).click();
     const receipt = await received(site, 'small');
+    // The note shows for a few seconds: check it before reading the image back.
+    await expect(toast(site)).toContainText('6000 × 4000');
     expect(receipt.files[0]).toMatchObject({ name: 'IMG_5000.jpg', type: 'image/jpeg' });
     expect(receipt.files[0]!.size).toBeLessThanOrEqual(500_000);
     // Fewer pixels, in the same shape. (That they are no fewer than the limit needs is
@@ -281,7 +286,6 @@ test.describe('changes that need a person to decide', () => {
     expect(image.width).toBeLessThan(6000);
     expect(image.width).toBeGreaterThan(600);
     expect(image.width / image.height).toBeCloseTo(1.5, 2);
-    await expect(toast(site)).toContainText('6000 × 4000');
   });
 
   test('declining fewer pixels gives the site the original photo', async ({ site }) => {

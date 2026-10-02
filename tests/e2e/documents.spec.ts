@@ -89,13 +89,14 @@ test.describe('PDFs', () => {
       .getByRole('button', { name: /Upload at/ })
       .click();
     const receipt = await received(site, 'certificate');
+    // The note shows for a few seconds: check it before the slower reading of the PDF.
+    await expect(toast(site)).toContainText('HEIC → PDF');
     expect(receipt.files[0]).toMatchObject({ name: 'scan.pdf', type: 'application/pdf' });
     expect(receipt.files[0]!.size).toBeLessThanOrEqual(300_000);
     const pdf = await readPdf(await chosenBytes(site, '#certificate'));
     expect(pdf.pages).toBe(1);
     // A wide picture gets a landscape A4 page.
     expect(Math.round(pdf.width)).toBe(842);
-    await expect(toast(site)).toContainText('HEIC → PDF');
   });
 
   test('a PDF that is over the limit is made smaller and stays a PDF', async ({ site }) => {

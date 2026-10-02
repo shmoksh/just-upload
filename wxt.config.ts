@@ -19,7 +19,7 @@ export default defineConfig({
   manifest: {
     name: 'Just Upload',
     description:
-      'Fixes files websites refuse: images, PDFs, CSV and Excel. Converts and fits size limits, right on your device.',
+      'Uploads that just work. When a website says no to your upload, Just Upload quietly fixes it, privately, on your device.',
     minimum_chrome_version: '116',
     permissions: ['storage', 'offscreen', 'activeTab'],
     icons: { 16: '/icons/16.png', 32: '/icons/32.png', 48: '/icons/48.png', 128: '/icons/128.png' },

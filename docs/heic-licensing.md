@@ -1,8 +1,6 @@
 # HEIC decoder: licensing and replacement
 
-Recorded before installing the dependency on 2026-09-27; packaging details updated the same day.
-
-Just Upload uses **libheif-js 1.23.2**, exclusively for local HEIC/HEIF decoding. This is the necessary, isolated LGPL exception allowed in the product brief. Chromium does not provide dependable native HEIC decoding. The library is **not MIT**; its package declares **LGPL-3.0**. The MIT license of another JavaScript wrapper would not remove the LGPL obligations of the compiled decoder.
+Just Upload uses **libheif-js 1.23.2**, exclusively for local HEIC/HEIF decoding, because Chromium does not provide dependable native HEIC decoding. The library is **not MIT**; its package declares **LGPL-3.0**. The MIT license of another JavaScript wrapper would not remove the LGPL obligations of the compiled decoder.
 
 ## Components and primary sources
 
