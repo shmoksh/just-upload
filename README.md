@@ -306,10 +306,11 @@ ourselves; see [tests/fixtures/README.md](tests/fixtures/README.md).
 Images, PDFs and spreadsheets are read and prepared inside your browser. They go only to
 the website you chose,
 exactly as they would without the extension. Just Upload has no servers and makes no
-network requests. It stores your settings, a count of fixed images and short notes
-about images it couldn't prepare (no images, file names or websites) on your device,
-and nothing else. See [PRIVACY.md](PRIVACY.md) and the store-ready
-[docs/privacy-policy.md](docs/privacy-policy.md).
+network requests. It stores your settings, a count of fixed files and short notes
+about files it couldn't prepare (no files, file names or websites) on your device,
+and nothing else. See [PRIVACY.md](PRIVACY.md) and the
+[privacy policy](docs/privacy-policy.md), which the store listing and the extension's
+settings link to.
 
 ## Permissions
 
@@ -380,6 +381,12 @@ Follow [docs/release-checklist.md](docs/release-checklist.md). In short:
    (see [docs/heic-licensing.md](docs/heic-licensing.md)).
 
 The GitHub Actions workflow builds and attaches the ZIP to every tagged release.
+
+## License
+
+Proprietary, all rights reserved: see [LICENSE](LICENSE). The third-party components
+inside the extension keep their own licenses, listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Contact: mokshbuilds@gmail.com.
 
 ## Contributing
 

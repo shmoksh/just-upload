@@ -13,6 +13,10 @@ Fixes files websites refuse: images, PDFs, CSV and Excel. Converts and fits size
 
 _(110 characters)_
 
+## Contact (developer and support fields)
+
+mokshbuilds@gmail.com
+
 ## Category
 
 Productivity (Chrome Web Store) · Productivity (Edge Add-ons)
@@ -117,5 +121,6 @@ serif of the extension's pages, and "Uploads that just work." Made by `pnpm scre
 - "I certify that ... not sold to third parties / not used for unrelated purposes / not
   used for creditworthiness": yes.
 - Remote code: **No**, all code is packaged in the extension.
-- Privacy policy URL: publish [docs/privacy-policy.md](privacy-policy.md) at a public URL
-  (for example GitHub Pages) and use that link.
+- Privacy policy URL: https://github.com/shmoksh/just-upload/blob/main/docs/privacy-policy.md
+  (the public repository's [docs/privacy-policy.md](privacy-policy.md); also linked from
+  Settings → About and the welcome page's footer).

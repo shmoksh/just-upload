@@ -1,0 +1,12 @@
+Copyright (c) 2026 Moksh Shah. All rights reserved.
+
+Just Upload and its source code are proprietary. No part of them may be copied,
+modified, distributed, sublicensed or sold, in whole or in part, without prior
+written permission from the copyright holder.
+
+The extension includes third-party components, each under its own license (for
+example MIT, BSD, Apache-2.0, SIL Open Font License and, for the separate,
+replaceable HEIC decoder, LGPL-3.0). Those licenses continue to apply to those
+components; see THIRD_PARTY_NOTICES.md and docs/heic-licensing.md.
+
+Contact: mokshbuilds@gmail.com

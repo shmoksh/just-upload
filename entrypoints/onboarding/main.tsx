@@ -2,7 +2,15 @@ import { AnimatePresence, m, useInView, useReducedMotion } from 'framer-motion';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import { Icon, Logo, MotionRoot, PRODUCT_NAME, Seal, Wordmark } from '../../src/ui/shared';
+import {
+  Icon,
+  Logo,
+  MotionRoot,
+  PRIVACY_POLICY_URL,
+  PRODUCT_NAME,
+  Seal,
+  Wordmark,
+} from '../../src/ui/shared';
 import { Lab } from './lab';
 import { Walkthrough } from './walkthrough';
 import '../../src/ui/pages.css';
@@ -996,6 +1004,9 @@ function Welcome() {
         <Wordmark size={20} />
         <span className="foot-links">
           <a href="options.html">Settings</a>
+          <a href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer">
+            Privacy policy
+          </a>
           <a href="licenses/THIRD_PARTY_NOTICES.txt">Open-source notices</a>
           <span className="num">v{browser.runtime.getManifest().version}</span>
         </span>

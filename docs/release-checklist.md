@@ -5,12 +5,14 @@ order. Tick each box in the release's pull request or issue.
 
 ## 1. Decisions that must be made once, before the first release
 
-- [ ] **Contact email.** Add it to [privacy-policy.md](privacy-policy.md) (section 1)
-      and to the store's developer and support fields. Problem reports are sent there.
-- [ ] **Privacy policy URL.** Publish [privacy-policy.md](privacy-policy.md) at a public
-      address (for example GitHub Pages) and paste it into both stores.
-- [ ] **License.** package.json says MIT, but there is no LICENSE file yet. Add one, or
-      change package.json.
+- [x] **Contact email.** mokshbuilds@gmail.com, in [privacy-policy.md](privacy-policy.md)
+      (section 1) and Settings → Problems. Also use it for the store's developer and
+      support fields. Problem reports are sent there.
+- [x] **Privacy policy URL.** https://github.com/shmoksh/just-upload/blob/main/docs/privacy-policy.md
+      (the repository is public). Paste it into both stores.
+- [x] **License.** Proprietary, all rights reserved ([LICENSE](../LICENSE), and
+      `"license": "UNLICENSED"` in package.json). Third-party components keep their own
+      licenses.
 - [ ] **HEIC decoder (LGPL-3.0).** Get a legal review of the packaging described in
       [heic-licensing.md](heic-licensing.md).
 

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Fixes files websites refuse: images, PDFs, CSV and Excel. Converts and fits size limits, right on your device.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "packageManager": "pnpm@10.12.4",
   "engines": {
     "node": ">=22.12.0"

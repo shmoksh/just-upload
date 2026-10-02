@@ -2,6 +2,9 @@ import { domAnimation, LazyMotion, m, MotionConfig } from 'framer-motion';
 import { type ReactNode, useState } from 'react';
 
 export const PRODUCT_NAME = 'Just Upload';
+/** The public privacy policy, also given to the Chrome Web Store. */
+export const PRIVACY_POLICY_URL =
+  'https://github.com/shmoksh/just-upload/blob/main/docs/privacy-policy.md';
 
 /**
  * Motion for the extension pages: only the animation features they use are loaded, and

@@ -1,6 +1,6 @@
 # Just Upload privacy policy
 
-_Last updated: 30 September 2026_
+_Last updated: 2 October 2026_
 
 Just Upload is a browser extension that prepares files you choose for upload (images, PDFs
 and spreadsheets) so that
@@ -12,7 +12,7 @@ websites accept them. This policy explains what data the extension handles. In s
 Just Upload is published as a browser extension with no accompanying online service. We
 do not operate servers for it, and we do not receive any data from it.
 
-_Publisher contact: [add a contact email before publishing]._
+Publisher contact: **mokshbuilds@gmail.com**
 
 ## 2. Data the extension processes
 

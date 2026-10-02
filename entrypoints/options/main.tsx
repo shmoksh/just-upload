@@ -12,7 +12,15 @@ import {
   problemReport,
   type ReportEnvironment,
 } from '../../src/ui/copy';
-import { Icon, MotionRoot, PRODUCT_NAME, Seal, Switch, Wordmark } from '../../src/ui/shared';
+import {
+  Icon,
+  MotionRoot,
+  PRIVACY_POLICY_URL,
+  PRODUCT_NAME,
+  Seal,
+  Switch,
+  Wordmark,
+} from '../../src/ui/shared';
 import { useProblems, useSettings, useStats } from '../../src/ui/use-settings';
 import { formatBytes } from '../../src/utils/files';
 import '../../src/ui/pages.css';
@@ -137,7 +145,13 @@ function Problems() {
       id="problems"
       title="Problems"
       description="When a file can’t be prepared, a short note is kept here, on this computer."
-      note="Notes hold no images, file names or website addresses, and nothing is sent anywhere. To tell us about a problem, copy the report and paste it into your message."
+      note={
+        <>
+          Notes hold no images, file names or website addresses, and nothing is sent anywhere. To
+          tell us about a problem, copy the report and email it to{' '}
+          <a href="mailto:mokshbuilds@gmail.com">mokshbuilds@gmail.com</a>.
+        </>
+      }
     >
       <div className="panel">
         {problems.length ? (
@@ -427,6 +441,10 @@ function Options() {
             <a className="row link-row" href="onboarding.html">
               <span className="row-title">How it works</span>
               <Icon name="arrow" size={16} />
+            </a>
+            <a className="row link-row" href={PRIVACY_POLICY_URL} target="_blank" rel="noreferrer">
+              <span className="row-title">Privacy policy</span>
+              <Icon name="external" size={16} />
             </a>
             <a className="row link-row" href="licenses/THIRD_PARTY_NOTICES.txt">
               <span className="row-title">Open-source notices</span>
