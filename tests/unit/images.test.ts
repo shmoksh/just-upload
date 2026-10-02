@@ -1,0 +1,291 @@
+import { describe, expect, it } from 'vitest';
+import { compressToTarget, QUALITY, type Encoder } from '../../src/images/compress';
+import { calculateDimensions, normalizeCrop, outputFilename } from '../../src/images/geometry';
+import { detectFormat, displaySize, parseHeader } from '../../src/images/headers';
+import { isCompatibleByHeader } from '../../src/images/quick-check';
+import { blockSimilarity } from '../../src/images/quality';
+import type { UploadRequirements } from '../../src/models';
+import { errorCode } from '../../src/utils/errors';
+import { fileOf, heicBytes, jpegBytes, pngBytes, webpBytes } from './helpers/images';
+
+const rules = (values: Partial<UploadRequirements> = {}): UploadRequirements => ({
+  acceptedMimeTypes: [],
+  acceptedExtensions: [],
+  confidence: 1,
+  sources: [],
+  ...values,
+});
+const codeOf = (action: () => unknown) => {
+  try {
+    action();
+  } catch (error) {
+    return errorCode(error);
+  }
+  return undefined;
+};
+
+describe('signature detection (names and MIME types can lie)', () => {
+  it('recognises each supported format by its bytes', () => {
+    expect(detectFormat(jpegBytes())).toBe('jpeg');
+    expect(detectFormat(pngBytes())).toBe('png');
+    expect(detectFormat(webpBytes())).toBe('webp');
+    expect(detectFormat(heicBytes())).toBe('heic');
+    expect(detectFormat(heicBytes({ brand: 'mif1', compatible: ['mif1'] }))).toBe('heif');
+  });
+  it('tells AVIF from HEIC, and random bytes from both', () => {
+    expect(detectFormat(heicBytes({ brand: 'avif', compatible: ['mif1', 'avif'] }))).toBe('avif');
+    expect(
+      detectFormat(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])),
+    ).toBe('unknown');
+    expect(detectFormat(new Uint8Array())).toBe('unknown');
+  });
+});
+
+describe('parseHeader', () => {
+  it('reads sizes, alpha and animation', () => {
+    expect(parseHeader(pngBytes({ width: 640, height: 480, colorType: 2 }))).toMatchObject({
+      format: 'png',
+      width: 640,
+      height: 480,
+      mayHaveAlpha: false,
+    });
+    expect(parseHeader(pngBytes({ colorType: 2, extra: ['tRNS'] })).mayHaveAlpha).toBe(true);
+    expect(parseHeader(pngBytes({ extra: ['acTL'] })).animated).toBe(true);
+    expect(
+      parseHeader(webpBytes({ width: 300, height: 200, alpha: true, animated: true })),
+    ).toMatchObject({ width: 300, height: 200, mayHaveAlpha: true, animated: true });
+    expect(parseHeader(heicBytes({ width: 4032, height: 3024 }))).toMatchObject({
+      format: 'heic',
+      width: 4032,
+      height: 3024,
+    });
+  });
+  it('reads EXIF orientation and reports the upright size', () => {
+    const header = parseHeader(jpegBytes({ width: 4032, height: 3024, orientation: 6 }));
+    expect(header.orientation).toBe(6);
+    expect(displaySize(header)).toEqual({ width: 3024, height: 4032 });
+    expect(
+      displaySize(parseHeader(jpegBytes({ width: 400, height: 300, orientation: 3 }))),
+    ).toEqual({ width: 400, height: 300 });
+  });
+  it('rejects damaged, empty and oversized images with a code', () => {
+    expect(codeOf(() => parseHeader(pngBytes({ truncated: true })))).toBe('damaged');
+    expect(codeOf(() => parseHeader(jpegBytes().subarray(0, 6)))).toBe('damaged');
+    expect(codeOf(() => parseHeader(pngBytes({ width: 0 })))).toBe('damaged');
+    // Gigapixel PNGs are read in a stream, but a side beyond a million pixels is not real.
+    expect(parseHeader(pngBytes({ width: 40_000, height: 40_000 }))).toMatchObject({
+      width: 40_000,
+    });
+    expect(codeOf(() => parseHeader(pngBytes({ width: 2_000_000, height: 10 })))).toBe(
+      'too-large-to-process',
+    );
+    expect(codeOf(() => parseHeader(heicBytes({ width: 100_000, height: 100_000 })))).toBe(
+      'too-large-to-process',
+    );
+    expect(codeOf(() => parseHeader(new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61])))).toBe(
+      'unsupported-format',
+    );
+  });
+});
+
+describe('in-page quick check', () => {
+  it('confirms compatibility from the header alone', async () => {
+    const file = fileOf(jpegBytes({ width: 1000, height: 800 }), 'a.jpg', 'image/jpeg');
+    expect(await isCompatibleByHeader(file, rules({ maxWidth: 1920, maxHeight: 1920 }))).toBe(true);
+    expect(await isCompatibleByHeader(file, rules({ minWidth: 1200 }))).toBe(false);
+  });
+  it('uses the upright size for rotated photos', async () => {
+    const rotated = fileOf(
+      jpegBytes({ width: 4032, height: 3024, orientation: 6 }),
+      'a.jpg',
+      'image/jpeg',
+    );
+    expect(await isCompatibleByHeader(rotated, rules({ maxWidth: 3100, maxHeight: 4100 }))).toBe(
+      true,
+    );
+  });
+  it('defers HEIC shape questions to the decoder', async () => {
+    const heic = fileOf(heicBytes(), 'a.heic');
+    expect(
+      await isCompatibleByHeader(
+        heic,
+        rules({ acceptedMimeTypes: ['image/heic'], maxWidth: 5000 }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('outputFilename', () => {
+  it.each([
+    ['IMG_9283.HEIC', 'jpeg', 'IMG_9283.jpg'],
+    ['photo.webp', 'jpeg', 'photo.jpg'],
+    ['photo.jpg', 'webp', 'photo.webp'],
+    ['holiday.2024.final.heic', 'jpeg', 'holiday.2024.final.jpg'],
+    ['Café in Zürich 📷.heic', 'png', 'Café in Zürich 📷.png'],
+    ['noextension', 'jpeg', 'noextension.jpg'],
+    ['.heic', 'jpeg', 'image.jpg'],
+    ['Photo.JPG', 'jpeg', 'Photo.JPG'],
+    ['scan.jpeg', 'jpeg', 'scan.jpeg'],
+  ] as const)('%s as %s is %s', (name, format, expected) =>
+    expect(outputFilename(name, format)).toBe(expected),
+  );
+});
+
+describe('calculateDimensions', () => {
+  it('fits within a maximum, keeping the shape: 4032 × 3024 in 1920 × 1920 is 1920 × 1440', () => {
+    expect(calculateDimensions(4032, 3024, rules({ maxWidth: 1920, maxHeight: 1920 }))).toEqual({
+      width: 1920,
+      height: 1440,
+    });
+    expect(calculateDimensions(3024, 4032, rules({ maxWidth: 1920, maxHeight: 1920 }))).toEqual({
+      width: 1440,
+      height: 1920,
+    });
+  });
+  it('never changes a size that already fits', () => {
+    expect(calculateDimensions(800, 600, rules({ maxWidth: 1920 }))).toEqual({
+      width: 800,
+      height: 600,
+    });
+  });
+  it('produces exact sizes once the shape matches', () => {
+    expect(calculateDimensions(3024, 3024, rules({ exactWidth: 600, exactHeight: 600 }))).toEqual({
+      width: 600,
+      height: 600,
+    });
+  });
+  it('requires approval to enlarge, and a crop to change shape', () => {
+    expect(codeOf(() => calculateDimensions(300, 300, rules({ minWidth: 600 })))).toBe(
+      'needs-upscale',
+    );
+    expect(calculateDimensions(300, 300, rules({ minWidth: 600 }), true)).toEqual({
+      width: 600,
+      height: 600,
+    });
+    expect(codeOf(() => calculateDimensions(800, 600, rules({ aspectRatio: 1 })))).toBe(
+      'needs-crop',
+    );
+  });
+  it('reports rules no size can satisfy', () => {
+    expect(
+      codeOf(() => calculateDimensions(1000, 100, rules({ maxWidth: 500, minHeight: 90 }))),
+    ).toBe('rules-conflict');
+  });
+});
+
+describe('normalizeCrop', () => {
+  it('rounds to whole pixels and keeps the crop inside the image', () => {
+    expect(normalizeCrop({ x: 0.4, y: 503.6, width: 3024.2, height: 3024.2 }, 3024, 4032)).toEqual({
+      x: 0,
+      y: 504,
+      width: 3024,
+      height: 3024,
+    });
+    expect(normalizeCrop(undefined, 10, 20)).toEqual({ x: 0, y: 0, width: 10, height: 20 });
+  });
+  it('rejects impossible crops', () => {
+    expect(codeOf(() => normalizeCrop({ x: Number.NaN, y: 0, width: 1, height: 1 }, 10, 10))).toBe(
+      'needs-crop',
+    );
+    expect(codeOf(() => normalizeCrop({ x: 20, y: 0, width: 5, height: 5 }, 10, 10))).toBe(
+      'needs-crop',
+    );
+  });
+});
+
+describe('compressToTarget', () => {
+  /** A deterministic stand-in: bytes grow with pixels and quality, like a real encoder. */
+  function encoder(bytesPerPixelAtFull = 0.5) {
+    const calls: [number, number, number][] = [];
+    const encode: Encoder = async (width, height, quality) => {
+      calls.push([width, height, quality]);
+      const size = Math.round(width * height * bytesPerPixelAtFull * quality ** 3);
+      return new Blob([new Uint8Array(size)], { type: 'image/jpeg' });
+    };
+    return { encode, calls };
+  }
+  const base = { width: 4000, height: 3000, format: 'jpeg' as const };
+
+  it('keeps top quality when the limit is already met', async () => {
+    const { encode, calls } = encoder(0.05);
+    const result = await compressToTarget({ ...base, maxBytes: 2_000_000 }, encode);
+    expect(result.quality).toBe(QUALITY.max);
+    expect(calls).toHaveLength(1);
+  });
+  it('searches quality and stays under the limit with a small margin', async () => {
+    const { encode } = encoder(0.5);
+    const result = await compressToTarget({ ...base, maxBytes: 3_000_000 }, encode);
+    expect(result.blob.size).toBeLessThanOrEqual(3_000_000 * QUALITY.margin);
+    expect(result.quality).toBeGreaterThanOrEqual(QUALITY.floor);
+    expect(result.quality).toBeLessThan(QUALITY.max);
+  });
+  it('never changes the pixel size, whatever the limit', async () => {
+    const { encode, calls } = encoder(0.5);
+    const result = await compressToTarget({ ...base, maxBytes: 500_000 }, encode);
+    expect([result.width, result.height]).toEqual([4000, 3000]);
+    await expect(compressToTarget({ ...base, maxBytes: 100_000 }, encode)).rejects.toThrow(
+      'target-unreachable',
+    );
+    expect(calls.every(([width, height]) => width === 4000 && height === 3000)).toBe(true);
+    expect(calls.length).toBeLessThan(20);
+  });
+  it('brings a too-small file up to the minimum, read strictly, without adding pixels', async () => {
+    const { encode, calls } = encoder(0.002);
+    // "20 KB" may be counted as 20,480 bytes.
+    const result = await compressToTarget({ ...base, maxBytes: 50_000, minBytes: 20_000 }, encode);
+    expect(result.blob.size).toBeGreaterThanOrEqual(20_480);
+    expect(result.quality).toBe(QUALITY.highest);
+    expect(calls.every(([width, height]) => width === 4000 && height === 3000)).toBe(true);
+  });
+  it('pads a file the most detailed save leaves too small, and keeps it under the maximum', async () => {
+    // A JPEG's start: SOI, then a short APP0 segment.
+    const encode: Encoder = async (width, height, quality) => {
+      const bytes = new Uint8Array(Math.round(width * height * 0.0001 * quality));
+      bytes.set([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xdb]);
+      return new Blob([bytes], { type: 'image/jpeg' });
+    };
+    const result = await compressToTarget({ ...base, maxBytes: 50_000, minBytes: 30_000 }, encode);
+    expect(result.blob.size).toBeGreaterThanOrEqual(30_720);
+    expect(result.blob.size).toBeLessThanOrEqual(50_000 * QUALITY.margin);
+    expect([result.width, result.height, result.quality]).toEqual([4000, 3000, QUALITY.highest]);
+    const bytes = new Uint8Array(await result.blob.arrayBuffer());
+    expect(Array.from(bytes.subarray(8, 10))).toEqual([0xff, 0xfe]);
+    // A format that cannot be padded safely says so.
+    await expect(
+      compressToTarget({ ...base, format: 'webp', maxBytes: 50_000, minBytes: 30_000 }, encode),
+    ).rejects.toThrow('target-unreachable');
+  });
+  it('cannot shrink a lossless format, so it says so instead of changing pixels', async () => {
+    const { encode, calls } = encoder(0.5);
+    await expect(
+      compressToTarget({ ...base, format: 'png', maxBytes: 3_000_000 }, encode),
+    ).rejects.toThrow('target-unreachable');
+    expect(calls).toHaveLength(1);
+  });
+});
+
+describe('quality score', () => {
+  const gradient = (width: number, height: number, noise = 0) => {
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < width * height; i++) {
+      const value = ((i % width) * 255) / width + (noise ? ((i * 7919) % 17) - 8 : 0) * noise;
+      pixels.set([value, value, value, 255], i * 4);
+    }
+    return pixels;
+  };
+  it('scores identical images as fully alike', () => {
+    const image = gradient(64, 32);
+    const { sum, count } = blockSimilarity(image, image, 64, 32);
+    expect(count).toBe(32);
+    expect(sum / count).toBeCloseTo(1, 6);
+  });
+  it('scores added noise below identical, and more noise lower still', () => {
+    const clean = gradient(64, 64);
+    const score = (noise: number) => {
+      const { sum, count } = blockSimilarity(clean, gradient(64, 64, noise), 64, 64);
+      return sum / count;
+    };
+    expect(score(1)).toBeLessThan(1);
+    expect(score(3)).toBeLessThan(score(1));
+  });
+});

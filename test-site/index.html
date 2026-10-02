@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Just Upload test page</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <strong>Just Upload test page</strong>
+      <span class="pill">Nothing here leaves your computer</span>
+    </header>
+    <main>
+      <h1>Try an upload</h1>
+      <p class="intro">
+        Each box below is an ordinary upload field with different rules, like the ones you meet on
+        real websites. Pick any image. The log at the bottom shows exactly what this page received.
+      </p>
+
+      <div class="grid">
+        <section>
+          <span class="tag">Test 1</span>
+          <h2>Profile picture</h2>
+          <p id="profile-help">JPG or PNG · Maximum 2 MB</p>
+          <label for="profile">Choose file</label>
+          <input
+            id="profile"
+            type="file"
+            accept=".jpg,.jpeg,.png"
+            aria-describedby="profile-help"
+          />
+        </section>
+
+        <section>
+          <span class="tag">Test 2</span>
+          <h2>JPEG only</h2>
+          <p id="jpeg-help">Please upload a JPEG image.</p>
+          <label for="jpeg">Choose file</label>
+          <input id="jpeg" type="file" accept="image/jpeg" aria-describedby="jpeg-help" />
+        </section>
+
+        <section>
+          <div class="field">
+            <span class="tag">Test 3</span>
+            <h2>Small file</h2>
+            <label for="small">Choose file</label>
+            <input id="small" type="file" accept="image/*" />
+            <small>Max 500 KB</small>
+          </div>
+        </section>
+
+        <section>
+          <span class="tag">Test 4</span>
+          <h2>Big enough</h2>
+          <label for="minimum">Choose file</label>
+          <input
+            id="minimum"
+            type="file"
+            accept="image/jpeg,image/png"
+            aria-describedby="minimum-help"
+          />
+          <p id="minimum-help">Minimum 600×600 pixels</p>
+        </section>
+
+        <section>
+          <span class="tag">Test 5</span>
+          <h2>Not too big</h2>
+          <p id="maximum-help">Images can be up to 1920 × 1920 pixels.</p>
+          <label for="maximum">Choose file</label>
+          <input
+            id="maximum"
+            type="file"
+            accept="image/jpeg,image/png"
+            aria-describedby="maximum-help"
+          />
+        </section>
+
+        <section>
+          <span class="tag">Test 6</span>
+          <h2>Square profile image</h2>
+          <p id="square-help">Square photo, 600 × 600 pixels</p>
+          <label for="square">Choose file</label>
+          <input
+            id="square"
+            type="file"
+            accept="image/jpeg,image/png"
+            aria-describedby="square-help"
+          />
+        </section>
+
+        <section>
+          <span class="tag">Test 7</span>
+          <h2>PNG only</h2>
+          <label for="png">Choose file</label>
+          <input id="png" type="file" accept="image/png" />
+        </section>
+
+        <section>
+          <span class="tag">Test 8</span>
+          <h2>Custom button (React)</h2>
+          <p>JPG only. Uploads the moment you pick a file.</p>
+          <div id="react-root"></div>
+        </section>
+
+        <section id="dynamic-section">
+          <span class="tag">Test 9</span>
+          <h2>Added later</h2>
+          <p>JPG only. The upload field appears when you press the button.</p>
+          <button id="add-input" type="button">Add upload field</button>
+        </section>
+
+        <section>
+          <span class="tag">Test 10</span>
+          <h2>Several at once</h2>
+          <p id="multiple-help">JPG only. Pick several images; order is kept.</p>
+          <label for="multiple">Choose files</label>
+          <input
+            id="multiple"
+            type="file"
+            accept="image/jpeg"
+            multiple
+            aria-describedby="multiple-help"
+          />
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>JPG or PNG</h2>
+          <label for="jpg-png">Choose file</label>
+          <input id="jpg-png" type="file" accept="image/jpeg,image/png" />
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>WebP only</h2>
+          <label for="webp">Choose file</label>
+          <input id="webp" type="file" accept="image/webp" />
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>Anything goes</h2>
+          <p>Any image, any size. Just Upload should never touch this one.</p>
+          <label for="any">Choose file</label>
+          <input id="any" type="file" accept="image/*" />
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>Documents</h2>
+          <p>PDF only. Not an image field, so it is left alone.</p>
+          <label for="pdf">Choose file</label>
+          <input id="pdf" type="file" accept="application/pdf" />
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>Form submit</h2>
+          <form id="form">
+            <p id="form-help">JPG only · max 1 MB</p>
+            <label for="form-image">Choose file</label>
+            <input
+              id="form-image"
+              name="image"
+              type="file"
+              accept="image/jpeg"
+              aria-describedby="form-help"
+            />
+            <button type="submit">Submit</button>
+          </form>
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>Exam photo</h2>
+          <p id="exam-help">
+            JPG only · 200 × 230 pixels · Photo size should be between 20 KB and 50 KB
+          </p>
+          <label for="exam">Choose file</label>
+          <input id="exam" type="file" accept=".jpg,.jpeg" aria-describedby="exam-help" />
+        </section>
+
+        <section>
+          <span class="tag">Extra</span>
+          <h2>Identity document</h2>
+          <p id="document-help">JPG or PNG. File size: minimum 30 KB, maximum 1 MB</p>
+          <label for="document">Choose file</label>
+          <input
+            id="document"
+            type="file"
+            accept=".jpg,.jpeg,.png"
+            aria-describedby="document-help"
+          />
+        </section>
+      </div>
+
+      <h2 class="group">Other formats</h2>
+      <div class="grid">
+        <section>
+          <span class="tag">Format</span>
+          <h2>GIF only</h2>
+          <label for="gif-only">Choose file</label>
+          <input id="gif-only" type="file" accept="image/gif" />
+        </section>
+        <section>
+          <span class="tag">Format</span>
+          <h2>BMP only</h2>
+          <label for="bmp-only">Choose file</label>
+          <input id="bmp-only" type="file" accept=".bmp" />
+        </section>
+        <section>
+          <span class="tag">Format</span>
+          <h2>TIFF only</h2>
+          <label for="tiff-only">Choose file</label>
+          <input id="tiff-only" type="file" accept="image/tiff" />
+        </section>
+        <section>
+          <span class="tag">Format</span>
+          <h2>Favicon</h2>
+          <p id="ico-help">Upload an .ico file</p>
+          <label for="ico-only">Choose file</label>
+          <input id="ico-only" type="file" accept=".ico" aria-describedby="ico-help" />
+        </section>
+        <section>
+          <span class="tag">Format</span>
+          <h2>AVIF only</h2>
+          <p id="avif-help">Max 1 MB</p>
+          <label for="avif-only">Choose file</label>
+          <input id="avif-only" type="file" accept="image/avif" aria-describedby="avif-help" />
+        </section>
+      </div>
+
+      <section class="log">
+        <div class="log-head">
+          <h2>What this page received</h2>
+          <button id="clear" type="button">Clear</button>
+        </div>
+        <ol id="log" aria-live="polite"></ol>
+      </section>
+    </main>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Just Upload: real upload libraries</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <strong>Real upload libraries</strong>
+      <span class="pill">Nothing here leaves your computer</span>
+    </header>
+    <main>
+      <h1>Popular upload widgets</h1>
+      <p class="intro">
+        These are real, widely used upload libraries, configured the way websites use them. Click or
+        drop an image; the log shows what each library accepted.
+      </p>
+      <div class="grid">
+        <section>
+          <span class="tag">React Dropzone</span>
+          <h2>Profile photo</h2>
+          <p>JPG only · max 2 MB</p>
+          <div id="react-dropzone-root"></div>
+        </section>
+        <section>
+          <span class="tag">FilePond</span>
+          <h2>Gallery image</h2>
+          <p id="filepond-help">JPG or PNG</p>
+          <input
+            id="filepond"
+            type="file"
+            accept="image/jpeg,image/png"
+            aria-describedby="filepond-help"
+          />
+        </section>
+        <section>
+          <span class="tag">Dropzone.js</span>
+          <h2>Cover image</h2>
+          <form id="dropzone" class="dropzone" action="/nowhere"></form>
+        </section>
+      </div>
+      <section class="log">
+        <div class="log-head"><h2>What each library accepted</h2></div>
+        <ol id="log" aria-live="polite"></ol>
+      </section>
+    </main>
+    <script type="module" src="/libraries.tsx"></script>
+  </body>
+</html>

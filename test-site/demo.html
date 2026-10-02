@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your profile</title>
+    <link rel="stylesheet" href="/demo.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <span class="logo">◆ Workspace</span>
+      <nav><span>Home</span><span>Projects</span><span class="current">Profile</span></nav>
+    </header>
+    <main>
+      <h1>Your profile</h1>
+      <p class="lead">This is how people will see you.</p>
+      <div class="card">
+        <div class="row">
+          <div class="thumb round" id="photo-preview" aria-hidden="true"><span>MS</span></div>
+          <div class="field">
+            <label for="photo">Profile photo</label>
+            <p id="photo-help" class="help">JPG or PNG · Maximum 2 MB</p>
+            <input id="photo" type="file" accept=".jpg,.jpeg,.png" aria-describedby="photo-help" />
+            <p class="status" id="photo-status" role="status"></p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="thumb" id="square-preview" aria-hidden="true"></div>
+          <div class="field">
+            <label for="square">Team badge</label>
+            <p id="square-help" class="help">Square image, 600 × 600 pixels</p>
+            <input
+              id="square"
+              type="file"
+              accept="image/jpeg,image/png"
+              aria-describedby="square-help"
+            />
+            <p class="status" id="square-status" role="status"></p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="thumb contain" id="logo-preview" aria-hidden="true"></div>
+          <div class="field">
+            <label for="logo">Company logo</label>
+            <p id="logo-help" class="help">JPG only</p>
+            <input id="logo" type="file" accept="image/jpeg" aria-describedby="logo-help" />
+            <p class="status" id="logo-status" role="status"></p>
+          </div>
+        </div>
+        <div class="field">
+          <label for="portfolio-input">Portfolio</label>
+          <p id="portfolio-help" class="help">Drag photos here · JPG only · Maximum 2 MB each</p>
+          <div id="portfolio" class="drop">
+            <input
+              id="portfolio-input"
+              type="file"
+              accept="image/jpeg"
+              multiple
+              hidden
+              aria-describedby="portfolio-help"
+            />
+            <span id="portfolio-label">Drop photos here, or click to browse</span>
+            <div class="thumbs" id="portfolio-items"></div>
+          </div>
+          <p class="status" id="portfolio-status" role="status"></p>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="/demo.ts"></script>
+  </body>
+</html>

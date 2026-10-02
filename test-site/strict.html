@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' ws:"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strict CSP test page</title>
+  </head>
+  <body>
+    <h1>A site with a strict Content Security Policy</h1>
+    <p>No inline styles, no blob: or data: images. Just Upload's interface must still work.</p>
+    <p id="square-help">Square photo, 600 × 600 pixels</p>
+    <input id="square" type="file" accept="image/jpeg,image/png" aria-describedby="square-help" />
+    <script type="module" src="/strict.ts"></script>
+  </body>
+</html>

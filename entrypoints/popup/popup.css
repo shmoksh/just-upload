@@ -1,0 +1,138 @@
+/* The toolbar popup: one control, the current site, two figures. */
+
+body {
+  width: 340px;
+}
+.popup {
+  display: grid;
+  padding-bottom: 2px;
+}
+.popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 10px 10px 14px;
+}
+
+.control {
+  margin: 0 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--ju-surface);
+  box-shadow:
+    0 0 0 1px var(--ju-line),
+    var(--ju-shadow-s);
+}
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.control-text {
+  flex: 1;
+  min-width: 0;
+}
+.control h1 {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.016em;
+}
+.status {
+  min-height: 19px;
+  margin-top: 5px;
+}
+.status p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ju-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status .status-dot {
+  margin-left: 2px;
+}
+
+.site {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--ju-line);
+  color: var(--ju-faint);
+}
+.site .host {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 12.5px/1.3 var(--ju-mono);
+  color: var(--ju-ink-2);
+}
+[data-state='paused'] .control {
+  box-shadow:
+    0 0 0 1px var(--ju-amber-line),
+    var(--ju-shadow-s);
+}
+
+.figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 10px 10px 0;
+}
+.figure {
+  display: grid;
+  gap: 3px;
+  padding: 10px 6px 4px;
+}
+.figure + .figure {
+  padding-left: 16px;
+  border-left: 1px solid var(--ju-line);
+}
+.figure .count {
+  font: 700 24px/1.1 var(--ju-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ju-ink);
+}
+.figure .label {
+  font-size: 12px;
+  color: var(--ju-muted);
+}
+[data-state='off'] .figures {
+  opacity: 0.55;
+}
+
+.popup-error {
+  margin: 10px 10px 0;
+}
+.popup-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 12px 16px 12px;
+  border-top: 1px solid var(--ju-line);
+  font-size: 12px;
+}
+.popup-foot .link-button {
+  font-size: 12px;
+}
+.local-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ju-muted);
+}
+.local-note svg {
+  flex: none;
+}

@@ -1,0 +1,254 @@
+/* Settings: what a section is about on the left, its controls on the right. */
+
+.settings-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 28px 96px;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+}
+.topbar .version {
+  height: 22px;
+  font-size: 11.5px;
+}
+
+.intro {
+  display: grid;
+  gap: 8px;
+  padding: 36px 0 28px;
+  border-bottom: 1px solid var(--ju-line);
+}
+.intro h1 {
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.032em;
+}
+.intro p {
+  font-size: 15px;
+  color: var(--ju-muted);
+}
+.intro .error {
+  margin-top: 8px;
+}
+
+.section {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 36px;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--ju-line);
+  scroll-margin-top: 16px;
+}
+.section-head h2 {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 24px;
+}
+.section-head p {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ju-muted);
+}
+.section-body {
+  min-width: 0;
+}
+.section-note {
+  margin: 10px 4px 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ju-muted);
+}
+
+.panel ul li {
+  overflow: hidden;
+}
+.panel ul li + li .row {
+  border-top: 1px solid var(--ju-line);
+}
+.host {
+  font: 500 13px/1.3 var(--ju-mono);
+  color: var(--ju-ink-2);
+}
+.empty {
+  justify-content: flex-start;
+  gap: 10px;
+  color: var(--ju-muted);
+}
+.empty-mark {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ju-accent);
+  background: var(--ju-accent-soft);
+}
+.prose {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  line-height: 1.6;
+}
+
+/* Images fixed */
+.figures {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px;
+}
+.figure-main {
+  display: grid;
+  gap: 2px;
+}
+.figure-number {
+  font: 700 40px/1 var(--ju-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+.figure-label {
+  font-size: 13px;
+  color: var(--ju-muted);
+}
+.figure-side {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+.breakdown {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 14px;
+  font-size: 12.5px;
+  color: var(--ju-muted);
+}
+.breakdown li {
+  display: contents;
+}
+.breakdown b {
+  text-align: right;
+  font-weight: 600;
+  color: var(--ju-ink-2);
+}
+
+/* Problems */
+.problem-list .row {
+  align-items: center;
+}
+.report-box {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--ju-line);
+  background: var(--ju-raised);
+}
+.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.field input,
+.report {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ju-surface);
+  box-shadow: inset 0 0 0 1px var(--ju-line-strong);
+  font-weight: 400;
+  transition: box-shadow 120ms ease;
+}
+.field input {
+  min-height: 40px;
+  padding: 0 12px;
+}
+.field input:focus,
+.report:focus {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px var(--ju-accent),
+    0 0 0 3px var(--ju-accent-soft);
+}
+.report {
+  padding: 12px;
+  resize: vertical;
+  font: 12px/1.6 var(--ju-mono);
+  color: var(--ju-ink-2);
+  background: var(--ju-sunken);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Privacy */
+.privacy-lead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.privacy-lead svg {
+  color: var(--ju-accent);
+}
+.facts {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ju-muted);
+}
+.facts li {
+  display: flex;
+  gap: 10px;
+}
+.facts li::before {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 4px;
+  margin-top: 9px;
+  border-radius: 50%;
+  background: var(--ju-faint);
+}
+
+/* About */
+.link-row {
+  text-decoration: none;
+  color: var(--ju-ink);
+  transition: background-color 120ms ease;
+}
+.link-row:hover {
+  background: var(--ju-raised);
+}
+.link-row svg {
+  color: var(--ju-faint);
+  transition: transform 160ms var(--ju-ease-out);
+}
+.link-row:hover svg {
+  transform: translateX(2px);
+}
+
+@media (max-width: 760px) {
+  .settings-page {
+    padding: 0 16px 64px;
+  }
+  .section {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .figures {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,130 @@
+/*
+ * Design tokens shared by the interface injected into websites and the extension pages.
+ * Green and white: clean white paper, leaf green for "accepted, it works", soft green
+ * tints for panels, dark green-grey ink rather than black. Honey marks "look at this"
+ * and a soft red marks "refused". With the computer in dark mode the same roles become
+ * black and green: near-black paper, light ink and a brighter green (see the end of this
+ * file). Data (formats, sizes, percentages) is set in the system monospace with tabular
+ * figures.
+ */
+:root,
+:host {
+  --ju-font:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto,
+    'Helvetica Neue', sans-serif;
+  --ju-mono:
+    ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas,
+    monospace;
+
+  --ju-paper: #ffffff;
+  --ju-surface: #ffffff;
+  --ju-raised: #f6faf7;
+  --ju-sunken: #eff6f1;
+  --ju-ink: #26352c;
+  --ju-ink-2: #3c4b42;
+  --ju-muted: #5d6b62;
+  --ju-faint: #87948b;
+  --ju-line: #e2ebe5;
+  --ju-line-strong: #cadbd0;
+
+  --ju-accent: #1b804c;
+  --ju-accent-deep: #146a3d;
+  --ju-accent-text: #ffffff;
+  --ju-accent-soft: #e8f5ed;
+  --ju-accent-line: #bfe2cc;
+  --ju-amber: #9a600e;
+  --ju-amber-soft: #fdf3e0;
+  --ju-amber-line: #f1dcb0;
+  --ju-red: #b9493f;
+  --ju-red-soft: #fcefec;
+  --ju-red-line: #f4d3cd;
+  --ju-focus: #1b804c;
+
+  --ju-radius-s: 6px;
+  --ju-radius: 10px;
+  --ju-radius-l: 14px;
+  --ju-radius-xl: 20px;
+
+  --ju-shadow-s: 0 1px 2px rgb(24 52 36 / 6%);
+  --ju-shadow-float:
+    0 0 0 1px rgb(24 52 36 / 7%), 0 1px 2px rgb(24 52 36 / 4%),
+    0 14px 34px -12px rgb(24 52 36 / 18%);
+  --ju-backdrop: rgb(22 44 32 / 26%);
+
+  /* A real spring (stiffness 560, damping 38), sampled for CSS: settles in about 360 ms. */
+  --ju-spring: linear(
+    0,
+    0.0313,
+    0.1081,
+    0.2101,
+    0.3223,
+    0.4348,
+    0.5408,
+    0.6365,
+    0.7198,
+    0.7902,
+    0.8482,
+    0.8947,
+    0.9311,
+    0.9587,
+    0.9791,
+    0.9935,
+    1.0033,
+    1.0094,
+    1.0128,
+    1.0143,
+    1.0145,
+    1.0137,
+    1.0124,
+    1.0108,
+    1.0092,
+    1.0076,
+    1.0061,
+    1.0048,
+    1.0036,
+    1.0027,
+    1.0019,
+    1.0013,
+    1
+  );
+  --ju-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ju-ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);
+  color-scheme: light;
+}
+
+/* Black and green, when the computer (or Chrome) is set to dark mode. */
+@media (prefers-color-scheme: dark) {
+  :root,
+  :host {
+    --ju-paper: #0c110e;
+    --ju-surface: #141b17;
+    --ju-raised: #19221d;
+    --ju-sunken: #0a0e0c;
+    --ju-ink: #e8f0eb;
+    --ju-ink-2: #c6d3cb;
+    --ju-muted: #98a89f;
+    --ju-faint: #6d7d73;
+    --ju-line: #232e28;
+    --ju-line-strong: #314037;
+
+    --ju-accent: #3cc47c;
+    --ju-accent-deep: #66d89a;
+    --ju-accent-text: #04170c;
+    --ju-accent-soft: #12291d;
+    --ju-accent-line: #1f4a33;
+    --ju-amber: #e9b357;
+    --ju-amber-soft: #2a2011;
+    --ju-amber-line: #4a3716;
+    --ju-red: #f18c81;
+    --ju-red-soft: #2c1715;
+    --ju-red-line: #4f2622;
+    --ju-focus: #3cc47c;
+
+    --ju-shadow-s: 0 1px 2px rgb(0 0 0 / 40%);
+    --ju-shadow-float:
+      0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 40%),
+      0 18px 40px -12px rgb(0 0 0 / 65%);
+    --ju-backdrop: rgb(0 0 0 / 55%);
+    color-scheme: dark;
+  }
+}

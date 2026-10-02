@@ -1,0 +1,43 @@
+{
+  "baseline-420.jpg": {
+    "reference": "baseline-420.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "baseline-422.jpg": {
+    "reference": "baseline-422.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "baseline-444-restart.jpg": {
+    "reference": "baseline-444-restart.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "progressive-420.jpg": {
+    "reference": "progressive-420.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "gray.jpg": {
+    "reference": "gray.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "cmyk.jpg": {
+    "reference": "cmyk.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "rotated-6.jpg": {
+    "reference": "rotated-6.eighth.rgb",
+    "width": 20,
+    "height": 15
+  },
+  "profile.jpg": {
+    "reference": "profile.eighth.rgb",
+    "width": 20,
+    "height": 15,
+    "profileBytes": 100000
+  }
+}

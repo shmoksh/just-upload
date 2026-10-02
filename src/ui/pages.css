@@ -1,0 +1,370 @@
+@import './tokens.css';
+
+/* The base every extension page shares: popup, settings and welcome. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  background: var(--ju-paper);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  color: var(--ju-ink);
+  background: var(--ju-paper);
+  font-family: var(--ju-font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+h1,
+h2,
+h3,
+p,
+ol,
+ul,
+figure {
+  margin: 0;
+}
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+a {
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--ju-focus);
+  outline-offset: 2px;
+}
+[tabindex='-1']:focus {
+  outline: none;
+}
+::selection {
+  background: var(--ju-accent-soft);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.mono {
+  font-family: var(--ju-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Brand lockup */
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  color: var(--ju-ink);
+  text-decoration: none;
+}
+.wordmark svg {
+  flex: none;
+  border-radius: 24%;
+  box-shadow: 0 1px 2px rgb(24 52 36 / 14%);
+}
+
+/* Buttons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.006em;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--ju-accent-text);
+  background: var(--ju-accent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 16%),
+    0 1px 2px rgb(24 52 36 / 16%);
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+.button:hover {
+  background: var(--ju-accent-deep);
+}
+.button:active {
+  transform: scale(0.985);
+}
+.button.quiet {
+  color: var(--ju-ink);
+  background: var(--ju-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--ju-line-strong),
+    0 1px 1px rgb(24 52 36 / 4%);
+}
+.button.quiet:hover {
+  background: var(--ju-sunken);
+}
+.button.small {
+  min-height: 30px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-size: 12.5px;
+}
+.button svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+.icon-button {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  color: var(--ju-muted);
+  background: transparent;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+.icon-button:hover {
+  color: var(--ju-ink);
+  background: var(--ju-sunken);
+}
+.icon-button svg {
+  width: 17px;
+  height: 17px;
+}
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  font-weight: 600;
+  color: var(--ju-ink);
+  text-decoration: none;
+}
+.link-button svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 160ms var(--ju-ease-out);
+}
+.link-button:hover svg {
+  transform: translateX(2px);
+}
+
+/* Switch: the track and a knob that springs across (see Switch in shared.tsx). */
+.switch {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 99px;
+  background: var(--ju-line-strong);
+  transition: background-color 200ms var(--ju-ease-out);
+}
+.switch[aria-checked='true'],
+.switch[data-on] {
+  background: var(--ju-accent);
+}
+.switch .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgb(24 52 36 / 22%),
+    0 0 0 0.5px rgb(24 52 36 / 6%);
+}
+.switch.large {
+  width: 48px;
+  height: 28px;
+}
+.switch.large .knob {
+  width: 22px;
+  height: 22px;
+}
+
+/* File tags: the product's signature. "HEIC 3.1 MB" before, "JPG 1.8 MB" after. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font: 500 12px/1 var(--ju-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ju-muted);
+  background: var(--ju-sunken);
+  box-shadow: inset 0 0 0 1px var(--ju-line);
+}
+.tag b {
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--ju-ink-2);
+}
+.tag.after {
+  color: var(--ju-accent);
+  background: var(--ju-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--ju-accent-line);
+}
+.tag.after b {
+  color: var(--ju-accent-deep);
+}
+.tag.refused {
+  color: var(--ju-red);
+  background: var(--ju-red-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ju-red) 22%, transparent);
+}
+.tag.refused b {
+  color: var(--ju-red);
+}
+.tag.ask {
+  color: var(--ju-amber);
+  background: var(--ju-amber-soft);
+  box-shadow: inset 0 0 0 1px var(--ju-amber-line);
+}
+.tag.ask b {
+  color: var(--ju-amber);
+}
+.arrow {
+  flex: none;
+  width: 16px;
+  height: 10px;
+  color: var(--ju-faint);
+}
+
+/* Panels and rows */
+.panel {
+  overflow: hidden;
+  border-radius: var(--ju-radius-l);
+  background: var(--ju-surface);
+  box-shadow:
+    0 0 0 1px var(--ju-line),
+    var(--ju-shadow-s);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+}
+.row + .row {
+  border-top: 1px solid var(--ju-line);
+}
+.row-text {
+  min-width: 0;
+}
+.row-title {
+  display: block;
+  font-weight: 550;
+  letter-spacing: -0.004em;
+}
+.row-detail {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ju-muted);
+  overflow-wrap: anywhere;
+}
+.switch-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.switch-row:hover {
+  background: var(--ju-raised);
+}
+.error {
+  padding: 10px 12px;
+  border-radius: var(--ju-radius);
+  font-size: 13px;
+  color: var(--ju-amber);
+  background: var(--ju-amber-soft);
+  box-shadow: inset 0 0 0 1px var(--ju-amber-line);
+}
+.status-dot {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ju-faint);
+}
+.status-dot.on {
+  background: var(--ju-accent);
+  box-shadow: 0 0 0 3px var(--ju-accent-soft);
+}
+.status-dot.paused {
+  background: var(--ju-amber);
+  box-shadow: 0 0 0 3px var(--ju-amber-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  .panel,
+  .tag,
+  .button.quiet,
+  .switch {
+    border: 1px solid CanvasText;
+  }
+}
