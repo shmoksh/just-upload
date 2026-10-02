@@ -85,9 +85,10 @@ websites you use.
 
 ## Single purpose statement
 
-Just Upload makes image files that a person selects in, or drops on, a website's upload
-field compatible with that field's stated format, size and dimension requirements, by
-converting, resizing or compressing a copy locally before the website receives it.
+Just Upload makes files that a person selects in, or drops on, a website's upload field
+(images, PDFs, CSV and Excel files) compatible with that field's stated format, size and
+dimension requirements, by converting, resizing or compressing a copy locally before the
+website receives it.
 
 ## Screenshots (1280 × 800)
 
