@@ -2,7 +2,7 @@ import type {
   CropRect,
   Decision,
   ImageInfo,
-  OutputFormat,
+  FileOutput,
   SerializedFile,
   SerializedTransform,
   TransformOptions,
@@ -94,8 +94,8 @@ export function sanitizeOptions(value: unknown): TransformOptions {
   const input = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const crop = sanitizeCrop(input.crop);
   return {
-    outputFormat: OUTPUT_FORMATS.includes(input.outputFormat as OutputFormat)
-      ? (input.outputFormat as OutputFormat)
+    outputFormat: [...OUTPUT_FORMATS, 'pdf', 'csv', 'xlsx'].includes(input.outputFormat as string)
+      ? (input.outputFormat as FileOutput)
       : 'jpeg',
     ...(crop ? { crop } : {}),
     allowTransparencyLoss: input.allowTransparencyLoss === true,

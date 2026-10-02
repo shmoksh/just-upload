@@ -149,13 +149,13 @@ test('every screen follows the computer’s light or dark setting', async ({
   extensionId,
   site,
 }) => {
-  // White and green in light mode; black and green in dark mode.
+  // White, forest and lime in light mode; near-black and lime in dark mode.
   const page = await context.newPage();
   await page.emulateMedia({ colorScheme: 'dark' });
   for (const name of ['popup', 'options', 'onboarding']) {
     await page.goto(`chrome-extension://${extensionId}/${name}.html`);
     const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(background, name).toBe('rgb(12, 17, 14)');
+    expect(background, name).toBe('rgb(11, 13, 12)');
   }
   const noteBackground = async () => {
     await site.setInputFiles(
@@ -166,10 +166,11 @@ test('every screen follows the computer’s light or dark setting', async ({
     await expect(note).toContainText('Ready to upload');
     return note.evaluate((element) => getComputedStyle(element).backgroundColor);
   };
-  expect(await noteBackground()).toBe('rgb(255, 255, 255)');
+  // Frosted glass: the theme's surface colour, slightly see-through.
+  expect(await noteBackground()).toBe('rgba(255, 255, 255, 0.86)');
   await site.emulateMedia({ colorScheme: 'dark' });
   await site.reload();
-  expect(await noteBackground()).toBe('rgb(20, 27, 23)');
+  expect(await noteBackground()).toBe('rgba(20, 23, 22, 0.92)');
 });
 
 test('the note shows the prepared photo itself, with the check on its corner', async ({ site }) => {

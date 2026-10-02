@@ -1,11 +1,11 @@
 /*
  * Design tokens shared by the interface injected into websites and the extension pages.
- * Green and white: clean white paper, leaf green for "accepted, it works", soft green
- * tints for panels, dark green-grey ink rather than black. Honey marks "look at this"
- * and a soft red marks "refused". With the computer in dark mode the same roles become
- * black and green: near-black paper, light ink and a brighter green (see the end of this
- * file). Data (formats, sizes, percentages) is set in the system monospace with tabular
- * figures.
+ * Forest and lime on true neutrals: white paper, near-black ink with a hint of forest,
+ * plain greys (not tinted), a deep forest green for "accepted, it works", and one bright
+ * lime as the signature: main buttons and highlights. A quiet grey marks "look at this"
+ * and a soft red marks "refused"; there is no amber. With the computer in dark mode the
+ * same roles become near-black paper, light ink and lime (see the end of this file).
+ * Data (formats, sizes, percentages) is set in the system monospace with tabular figures.
  */
 :root,
 :host {
@@ -18,38 +18,49 @@
 
   --ju-paper: #ffffff;
   --ju-surface: #ffffff;
-  --ju-raised: #f6faf7;
-  --ju-sunken: #eff6f1;
-  --ju-ink: #26352c;
-  --ju-ink-2: #3c4b42;
-  --ju-muted: #5d6b62;
-  --ju-faint: #87948b;
-  --ju-line: #e2ebe5;
-  --ju-line-strong: #cadbd0;
+  --ju-raised: #f6f7f5;
+  --ju-sunken: #f0f2ef;
+  --ju-ink: #0f1a14;
+  --ju-ink-2: #2d3832;
+  --ju-muted: #5c6660;
+  --ju-faint: #8a928d;
+  --ju-line: #e6e9e6;
+  --ju-line-strong: #d0d5d1;
 
-  --ju-accent: #1b804c;
-  --ju-accent-deep: #146a3d;
+  --ju-accent: #16703e;
+  --ju-accent-deep: #0f5530;
   --ju-accent-text: #ffffff;
-  --ju-accent-soft: #e8f5ed;
-  --ju-accent-line: #bfe2cc;
-  --ju-amber: #9a600e;
-  --ju-amber-soft: #fdf3e0;
-  --ju-amber-line: #f1dcb0;
+  --ju-accent-soft: #ecf9e2;
+  --ju-accent-line: #c9edb0;
+  /* The signature: main buttons and highlighter marks, always with dark text on it. */
+  --ju-lime: #a2ed76;
+  --ju-lime-deep: #8ee05c;
+  --ju-lime-ink: #0d2a17;
+  --ju-forest: #0e3a26;
+  --ju-caution: #545e58;
+  --ju-caution-soft: #f0f2f0;
+  --ju-caution-line: #d8dcd9;
   --ju-red: #b9493f;
   --ju-red-soft: #fcefec;
   --ju-red-line: #f4d3cd;
-  --ju-focus: #1b804c;
+  --ju-focus: #16703e;
 
   --ju-radius-s: 6px;
   --ju-radius: 10px;
   --ju-radius-l: 14px;
   --ju-radius-xl: 20px;
 
-  --ju-shadow-s: 0 1px 2px rgb(24 52 36 / 6%);
+  --ju-shadow-s: 0 1px 2px rgb(15 26 20 / 6%);
   --ju-shadow-float:
-    0 0 0 1px rgb(24 52 36 / 7%), 0 1px 2px rgb(24 52 36 / 4%),
-    0 14px 34px -12px rgb(24 52 36 / 18%);
-  --ju-backdrop: rgb(22 44 32 / 26%);
+    0 0 0 1px rgb(15 26 20 / 7%), 0 1px 2px rgb(15 26 20 / 4%),
+    0 14px 34px -12px rgb(15 26 20 / 18%);
+  --ju-backdrop: rgb(15 26 20 / 30%);
+  /* The in-page note: frosted glass, a bright top edge, and a soft lift. */
+  --ju-glass: rgb(255 255 255 / 86%);
+  --ju-glass-edge: rgb(255 255 255 / 75%);
+  --ju-shadow-glass:
+    0 0 0 0.5px rgb(15 26 20 / 14%), 0 1px 2px rgb(15 26 20 / 6%),
+    0 14px 30px -12px rgb(15 26 20 / 22%), 0 34px 64px -32px rgb(15 26 20 / 28%);
 
   /* A real spring (stiffness 560, damping 38), sampled for CSS: settles in about 360 ms. */
   --ju-spring: linear(
@@ -92,39 +103,48 @@
   color-scheme: light;
 }
 
-/* Black and green, when the computer (or Chrome) is set to dark mode. */
+/* Near-black and lime, when the computer (or Chrome) is set to dark mode. */
 @media (prefers-color-scheme: dark) {
   :root,
   :host {
-    --ju-paper: #0c110e;
-    --ju-surface: #141b17;
-    --ju-raised: #19221d;
-    --ju-sunken: #0a0e0c;
-    --ju-ink: #e8f0eb;
-    --ju-ink-2: #c6d3cb;
-    --ju-muted: #98a89f;
-    --ju-faint: #6d7d73;
-    --ju-line: #232e28;
-    --ju-line-strong: #314037;
+    --ju-paper: #0b0d0c;
+    --ju-surface: #141716;
+    --ju-raised: #1a1e1c;
+    --ju-sunken: #080a09;
+    --ju-ink: #f1f4f1;
+    --ju-ink-2: #cad1cc;
+    --ju-muted: #979f9a;
+    --ju-faint: #6b736e;
+    --ju-line: #232826;
+    --ju-line-strong: #323835;
 
-    --ju-accent: #3cc47c;
-    --ju-accent-deep: #66d89a;
-    --ju-accent-text: #04170c;
-    --ju-accent-soft: #12291d;
-    --ju-accent-line: #1f4a33;
-    --ju-amber: #e9b357;
-    --ju-amber-soft: #2a2011;
-    --ju-amber-line: #4a3716;
+    --ju-accent: #a2ed76;
+    --ju-accent-deep: #c2f5a2;
+    --ju-accent-text: #0d2a17;
+    --ju-accent-soft: #16200f;
+    --ju-accent-line: #2b401f;
+    --ju-lime: #a2ed76;
+    --ju-lime-deep: #b8f494;
+    --ju-lime-ink: #0d2a17;
+    --ju-forest: #0f2a1c;
+    --ju-caution: #b0b8b3;
+    --ju-caution-soft: #1a1e1c;
+    --ju-caution-line: #2f3532;
     --ju-red: #f18c81;
     --ju-red-soft: #2c1715;
     --ju-red-line: #4f2622;
-    --ju-focus: #3cc47c;
+    --ju-focus: #a2ed76;
 
     --ju-shadow-s: 0 1px 2px rgb(0 0 0 / 40%);
     --ju-shadow-float:
       0 0 0 1px rgb(255 255 255 / 7%), 0 1px 2px rgb(0 0 0 / 40%),
       0 18px 40px -12px rgb(0 0 0 / 65%);
     --ju-backdrop: rgb(0 0 0 / 55%);
+    --ju-glass: rgb(20 23 22 / 92%);
+    --ju-glass-edge: rgb(255 255 255 / 8%);
+    --ju-shadow-glass:
+      0 0 0 0.5px rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 40%),
+      0 16px 36px -12px rgb(0 0 0 / 60%), 0 34px 64px -30px rgb(0 0 0 / 70%);
     color-scheme: dark;
   }
 }

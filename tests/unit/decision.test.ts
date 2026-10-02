@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   chooseOutput,
+  consentFor,
   decide,
   defaultCrop,
   requiredScale,
@@ -246,5 +247,24 @@ describe('asking before quality loss', () => {
   });
   it('never asks about quality when the setting is off', () => {
     expect(needsQualityConsent(kept(60), { ...PREFS, askBeforeQualityChanges: false })).toBe(false);
+  });
+});
+
+describe('asking before fewer pixels', () => {
+  const kept = (qualityKept: number, resizedToFit: boolean) => ({
+    qualityKept,
+    resizedToFit,
+    sizeLimited: true,
+  });
+  it('always asks before a copy with fewer pixels, whatever the quality setting', () => {
+    const off = { askBeforeQualityChanges: false };
+    expect(consentFor(kept(99, true), PREFS)).toBe('shrink');
+    expect(consentFor(kept(99, true), off)).toBe('shrink');
+    // One question covers both: the pixels and the quality they keep.
+    expect(consentFor(kept(80, true), PREFS)).toBe('shrink');
+  });
+  it('otherwise asks only about visible quality loss, or nothing', () => {
+    expect(consentFor(kept(80, false), PREFS)).toBe('quality');
+    expect(consentFor(kept(99, false), PREFS)).toBeUndefined();
   });
 });

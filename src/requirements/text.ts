@@ -78,7 +78,7 @@ const NOT_SQUARE = /\b(?:not|n't|need not|no need to)\s+(?:need to\s+|have to\s+
 // "JPG/PNG" is a list, but "photos/png-files/x" is a path: a slash only separates
 // format names, never other words.
 const FORMAT_TOKEN =
-  /(?<![\w.-])(?:image\/([a-z0-9.+-]+)|\.?(jpe?g[ -]?xl|jpe?g|jfif|png|apng|webp|heic|heif|hif|gif|avif|svg|bmp|tiff?|ico|jxl)s?)(?![\w-])/gi;
+  /(?<![\w.-])(?:((?:image|application|text)\/[a-z0-9.+-]+)|\.?(jpe?g[ -]?xl|jpe?g|jfif|png|apng|webp|heic|heif|hif|gif|avif|svg|bmp|tiff?|ico|jxl|pdf|csv|xlsx?|excel)s?)(?![\w-])/gi;
 const FORMAT_ALLOW_WORDS =
   /\b(?:only|accept(?:s|ed)?|allow(?:s|ed)?|support(?:s|ed)?|formats?|file types?|types?|must be|should be|upload an?|(?:saved?|upload(?:ed)?|sen[dt]|submit(?:ted)?|export(?:ed)?)(?:\s+\w+){0,3}\s+as|convert(?:ed)?\b.{0,30}\bto)\b/i;
 const FORMAT_NEGATION_BEFORE = /\b(?:no|not|except|excluding|without)\s+(?:\w+\s+)?$/i;
@@ -338,11 +338,14 @@ function parseFormats(
     if (FORMAT_NEGATION_BEFORE.test(clause.slice(Math.max(0, start - 24), start))) continue;
     if (FORMAT_NEGATION_AFTER.test(clause.slice(end, end + 36))) continue;
     const token = match[2]?.toLowerCase().replace(/^jpe?g[ -]?xl$/, 'jxl');
-    const format = match[1]
-      ? formatFromMime(`image/${match[1]}`)
-      : formatFromExtension(`.${token}`);
-    if (!format) continue;
-    found.add(mimeOf(format));
+    // "Excel" names both workbook formats.
+    const formats = match[1]
+      ? [formatFromMime(match[1])]
+      : token === 'excel'
+        ? (['xlsx', 'xls'] as const)
+        : [formatFromExtension(`.${token}`)];
+    if (!formats.some(Boolean)) continue;
+    for (const format of formats) if (format) found.add(mimeOf(format));
     tokens++;
     if (match[1] || match[0].startsWith('.')) explicit = true;
   }

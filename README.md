@@ -2,8 +2,9 @@
 
 **Upload any image. We make it work.**
 
-Just Upload is a browser extension that makes image uploads work on websites that are
-picky about format, file size or dimensions. You pick a photo the way you always do. If
+Just Upload is a browser extension that makes uploads work on websites that are picky
+about format, file size or dimensions: images, PDFs, and CSV or Excel files. You pick a
+file the way you always do. If
 the website can take it as it is, nothing happens. If it can't, Just Upload prepares a
 compatible copy on your device, before the website ever sees the original, and the
 upload carries on.
@@ -17,27 +18,32 @@ nothing to configure.
 
 ## What it does
 
-| You pick                   | The website wants                              | What happens                                                       |
-| -------------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
-| `vacation.webp`, 2.7 MB    | JPG or PNG, maximum 2 MB                       | Converted to a 1.9 MB JPG at full size, keeping 97%, automatically |
-| `Screenshot.png`, 2.3 MB   | Attachments up to 1 MB                         | Saved as a 781 KB JPG at full size, keeping 99%, automatically     |
-| `scan.tif`, 26.1 MB        | JPG only, maximum 2 MB                         | Converted to a 1.9 MB JPG at full size, keeping 98%, automatically |
-| `IMG_2041.HEIC`, 1.6 MB    | JPG only, maximum 1 MB                         | Converted to a 942 KB JPG at full size, keeping 97%, automatically |
-| `photo.webp`               | `accept="image/jpeg,image/png"`                | Converted to JPG, automatically                                    |
-| A 4032 × 3024 photo        | Maximum 1920 × 1920                            | Resized to 1920 × 1440, automatically                              |
-| A 24 MP camera JPG, 8.2 MB | File size should not exceed 2 MB               | Made smaller to 1.8 MB at its full 6000 × 4000, automatically      |
-| A phone photo, 1.6 MB      | Max 500 KB                                     | Asks first: 96% of the photo's quality would be kept               |
-| A 48 MP phone JPG, 9.4 MB  | Max 1 MB                                       | **Left as it is**, with a note: it can't fit without fewer pixels  |
-| `photo.jpg`, 900 KB        | JPG or PNG, max 2 MB                           | **Nothing.** No delay, no message                                  |
-| A portrait photo           | Square 600 × 600                               | Asks you to choose the crop first                                  |
-| A transparent PNG          | JPG only                                       | Asks before filling the background with white                      |
-| `logo.svg`                 | PNG only                                       | Drawn sharp as `logo.png`, automatically                           |
-| A 4.6 GB BigTIFF scan      | JPG or PNG, up to 1920 × 1920 pixels           | Read in a stream and saved as a 1920 × 1824 JPG                    |
-| A photo                    | "Please save your file as a TIFF"              | Converted to TIFF, automatically                                   |
-| Any photo                  | Favicon, `.ico` only                           | Made into a 256 × 256 `.ico`, automatically                        |
-| A photo                    | GIF only                                       | Asks first: GIF can show only 256 colours                          |
-| A 0.9 KB PNG signature     | File size: minimum 30 KB, maximum 1 MB         | Brought up to 31 KB with the same pixels, automatically            |
-| A phone photo              | JPG, 200 × 230 pixels, between 20 KB and 50 KB | Asks where to crop, then a 200 × 230 JPG of 20 KB                  |
+| You pick                   | The website wants                              | What happens                                                                              |
+| -------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `vacation.webp`, 2.7 MB    | JPG or PNG, maximum 2 MB                       | Converted to a 1.9 MB JPG at full size, keeping 97%, automatically                        |
+| `Screenshot.png`, 2.3 MB   | Attachments up to 1 MB                         | Saved as a 781 KB JPG at full size, keeping 99%, automatically                            |
+| `scan.tif`, 26.1 MB        | JPG only, maximum 2 MB                         | Converted to a 1.9 MB JPG at full size, keeping 98%, automatically                        |
+| `IMG_2041.HEIC`, 1.6 MB    | JPG only, maximum 1 MB                         | Converted to a 942 KB JPG at full size, keeping 97%, automatically                        |
+| `photo.webp`               | `accept="image/jpeg,image/png"`                | Converted to JPG, automatically                                                           |
+| A 4032 × 3024 photo        | Maximum 1920 × 1920                            | Resized to 1920 × 1440, automatically                                                     |
+| A 24 MP camera JPG, 8.2 MB | File size should not exceed 2 MB               | Made smaller to 1.8 MB at its full 6000 × 4000, automatically                             |
+| A phone photo, 1.6 MB      | Max 500 KB                                     | Asks first: 96% of the photo's quality would be kept                                      |
+| A 48 MP phone JPG, 9.4 MB  | Max 1 MB                                       | **Left as it is**, with a note: it can't fit without fewer pixels                         |
+| `photo.jpg`, 900 KB        | JPG or PNG, max 2 MB                           | **Nothing.** No delay, no message                                                         |
+| A portrait photo           | Square 600 × 600                               | Asks you to choose the crop first                                                         |
+| A transparent PNG          | JPG only                                       | Asks before filling the background with white                                             |
+| `logo.svg`                 | PNG only                                       | Drawn sharp as `logo.png`, automatically                                                  |
+| A 4.6 GB BigTIFF scan      | JPG or PNG, up to 1920 × 1920 pixels           | Read in a stream and saved as a 1920 × 1824 JPG                                           |
+| A photo                    | "Please save your file as a TIFF"              | Converted to TIFF, automatically                                                          |
+| Any photo                  | Favicon, `.ico` only                           | Made into a 256 × 256 `.ico`, automatically                                               |
+| A photo                    | GIF only                                       | Asks first: GIF can show only 256 colours                                                 |
+| A 0.9 KB PNG signature     | File size: minimum 30 KB, maximum 1 MB         | Brought up to 31 KB with the same pixels, automatically                                   |
+| A phone photo              | JPG, 200 × 230 pixels, between 20 KB and 50 KB | Asks where to crop, then a 200 × 230 JPG of 20 KB                                         |
+| A photo or scan            | PDF only, max 300 KB                           | Put on an A4 page as a one-page PDF, full size, automatically                             |
+| A scanned PDF, 2 MB        | PDF, max 1 MB                                  | Made smaller to 957 KB by saving its pictures at lower quality (97% kept); text untouched |
+| `certificate.pdf`          | JPG or PNG only                                | Its page drawn as a JPG; asks first if the PDF has several pages                          |
+| `contacts.xlsx`            | CSV files only                                 | Saved as CSV; asks which sheet if the workbook has several                                |
+| `contacts.csv`             | Excel workbook (.xlsx) only                    | Saved as XLSX; codes like 00123 keep their zeros                                          |
 
 This works whether you choose the file with the site's button or drag it onto the site's
 upload area.
@@ -48,10 +54,13 @@ question, never a surprise. Every note says how much of the photo's quality was 
 for example "WebP → JPG · Quality kept: 97%". If something cannot be prepared safely, the
 website gets your original file, exactly as if Just Upload were not installed.
 
-**Your photo keeps its pixel size unless the website states one.** A file-size limit is
-met with quality alone. If a photo can't get under the limit at its full size, the
-website gets the original and a note says so. A file under a site's minimum size is saved
-in more detail and, if that is not enough, padded with bytes image readers skip.
+**Your photo keeps its pixel size unless the website states one, or you agree.** A
+file-size limit is met with quality first. Only if no quality can get a photo (or a PDF's
+pictures) under the limit at full size does Just Upload find the largest smaller size
+that fits, and ask before using it: "This image can't fit 500 KB at full size. To fit, it
+needs fewer pixels: 6000 × 4000 → 2926 × 1951. It keeps 95% of its quality." Declining
+gives the website your original. A file under a site's minimum size is saved in more
+detail and, if that is not enough, padded with bytes image readers skip.
 
 **Rules are read the way websites write them**: "Max. 2 MB", "File size should not exceed
 500KB", "Image upto 2MB", "File size: 20KB - 50KB", "Image size must be at least 50 KB",
@@ -171,19 +180,23 @@ wants. Without a stated size every pixel is kept, so an image over 64 megapixels
 passed through unchanged, with a note. Every other format, and interlaced PNGs, work up
 to 512 MB and 250 megapixels.
 
-| Format           | Read | Write | Notes                                                                      |
-| ---------------- | :--: | :---: | -------------------------------------------------------------------------- |
-| JPEG (JPG, JFIF) |  ✓   |   ✓   | EXIF rotation applied                                                      |
-| PNG (and APNG)   |  ✓   |   ✓   | Animated PNG: first frame, with your approval                              |
-| WebP             |  ✓   |   ✓   | Animated WebP: first frame, with your approval                             |
-| AVIF             |  ✓   |   ✓   | Writing uses libavif, loaded only when a site asks for AVIF                |
-| GIF              |  ✓   |   ✓   | Writing asks first (256 colours); animated GIF: first frame, with approval |
-| TIFF (TIF)       |  ✓   |   ✓   | Compressed TIFFs read; written uncompressed; multi-page: first page        |
-| BMP              |  ✓   |   ✓   | Written as 24-bit; asks before filling transparency with white             |
-| ICO (and CUR)    |  ✓   |   ✓   | Written as a PNG icon, at most 256 × 256                                   |
-| HEIC / HEIF      |  ✓   |   –   | iPhone photos, including rotation                                          |
-| SVG              |  ✓   |   –   | Drawn sharp at the size the site needs (at least 1024 px)                  |
-| JPEG XL (JXL)    |  ✓   |   –   | Read with libjxl, loaded only when needed                                  |
+| Format              | Read | Write | Notes                                                                      |
+| ------------------- | :--: | :---: | -------------------------------------------------------------------------- |
+| JPEG (JPG, JFIF)    |  ✓   |   ✓   | EXIF rotation applied                                                      |
+| PNG (and APNG)      |  ✓   |   ✓   | Animated PNG: first frame, with your approval                              |
+| WebP                |  ✓   |   ✓   | Animated WebP: first frame, with your approval                             |
+| AVIF                |  ✓   |   ✓   | Writing uses libavif, loaded only when a site asks for AVIF                |
+| GIF                 |  ✓   |   ✓   | Writing asks first (256 colours); animated GIF: first frame, with approval |
+| TIFF (TIF)          |  ✓   |   ✓   | Compressed TIFFs read; written uncompressed; multi-page: first page        |
+| BMP                 |  ✓   |   ✓   | Written as 24-bit; asks before filling transparency with white             |
+| ICO (and CUR)       |  ✓   |   ✓   | Written as a PNG icon, at most 256 × 256                                   |
+| HEIC / HEIF         |  ✓   |   –   | iPhone photos, including rotation                                          |
+| SVG                 |  ✓   |   –   | Drawn sharp at the size the site needs (at least 1024 px)                  |
+| JPEG XL (JXL)       |  ✓   |   –   | Read with libjxl, loaded only when needed                                  |
+| PDF                 |  ✓   |   ✓   | An image becomes a one-page A4 PDF; a page becomes an image; shrunk to fit |
+| CSV                 |  ✓   |   ✓   | UTF-8 (Windows-1252 read too); codes keep leading zeros                    |
+| XLSX (Excel)        |  ✓   |   ✓   | A CSV holds one sheet: asks before using the first of several              |
+| XLS (Excel 97–2003) |  ✓   |   –   | Saved as XLSX or CSV                                                       |
 
 **Not supported, on purpose:**
 
@@ -194,6 +207,17 @@ to 512 MB and 250 megapixels.
 - **Camera RAW (CR2, NEF, ARW, DNG…), Photoshop (PSD), JPEG 2000, TGA.** These are
   editing formats rather than finished images, and reading them properly needs large
   specialised decoders. They are passed through untouched.
+
+**PDFs** (with pdf-lib and PDF.js, loaded only when a PDF needs work): an image on a
+field that takes only PDF is placed on an A4 page as it is (a JPG or PNG goes in without
+being saved again). A PDF over a size limit is made smaller by saving its JPG pictures at
+a lower quality, with the same pixels, text and layout; a PDF with nothing to make
+smaller, a signed one or a password-protected one is passed through. A PDF on a field
+that takes only images has its page drawn at 200 pixels to the inch.
+
+**Spreadsheets** (with SheetJS, loaded only when needed): a workbook becomes CSV where
+only CSV is taken (formulas become their values), and CSV or XLS become XLSX where only
+Excel is taken. A spreadsheet in an accepted format is never touched.
 
 The original format is kept whenever the site allows it. Otherwise photos become JPG
 (then WebP, AVIF, PNG…), images with transparency become PNG (then WebP, AVIF…), and a
@@ -279,7 +303,8 @@ ourselves; see [tests/fixtures/README.md](tests/fixtures/README.md).
 
 ## Privacy
 
-Images are read and prepared inside your browser. They go only to the website you chose,
+Images, PDFs and spreadsheets are read and prepared inside your browser. They go only to
+the website you chose,
 exactly as they would without the extension. Just Upload has no servers and makes no
 network requests. It stores your settings, a count of fixed images and short notes
 about images it couldn't prepare (no images, file names or websites) on your device,
@@ -316,15 +341,27 @@ Each one is explained in plain English in [docs/PERMISSIONS.md](docs/PERMISSIONS
 - **Embedded frames.** Uploads inside iframes work, but the notice and any dialog appear
   inside that frame, which can be cramped for very small embedded widgets.
 - **Animated images** become still images, and only after you agree.
+- **PDFs:** only JPG pictures inside a PDF are made smaller; a PDF made of text or vector
+  drawings that is still too large is passed through, as are signed and
+  password-protected PDFs. A PDF becomes an image from its first page only (asked first
+  when it has several). PDFs whose text needs Chinese, Japanese or Korean character maps
+  that are not embedded, or that use JPEG 2000 pictures, are passed through rather than
+  drawn incorrectly. Only PDFs up to 200 MB are drawn.
+- **Spreadsheets:** a CSV holds one sheet, so a workbook becomes CSV from its first sheet
+  (asked first when it has several). Formulas become their values and formatting is not
+  kept in a CSV. Workbooks up to 25 MB; XLS is read but not written.
+- **Video, Word and PowerPoint** files are not converted. Turning a Word file into a PDF
+  faithfully needs a full office suite, which cannot run inside an extension.
 - **Metadata** (EXIF, including location) is not copied to prepared images. Originals
   are never changed.
 - **Limits:** 5 GB per file for JPEG, PNG, TIFF and BMP; 512 MB and 250 megapixels for
-  other formats (5 MB for SVG); at most 12 files and 20 GB in one selection. Processing
-  may take 30 seconds plus a minute per GB. Prepared images are at most 64 megapixels,
-  more than any upload field asks for; a larger image is prepared only when the website
-  states a pixel size, and otherwise passed through unchanged. A 12-megapixel photo written as AVIF under a size
-  limit takes about 10 seconds. On pages that block Just Upload's frame, files over
-  40 MB are passed through.
+  other formats (5 MB for SVG); at most 12 files and 20 GB in one selection. A job that
+  shows no progress for 30 seconds plus a minute per GB is stopped, and the site gets the
+  original. Prepared images are at most 64 megapixels, more than any upload field asks
+  for; a larger image is prepared only when the website states a pixel size, and
+  otherwise passed through unchanged. A 12-megapixel photo written as AVIF under a size
+  limit takes about 10 seconds. On pages that block Just Upload's frame, files over 40 MB
+  are passed through.
 - **Browsers:** Chromium only for now. Firefox has no offscreen API (its event page can
   host the worker instead); Safari needs a separate Xcode packaging step.
 

@@ -47,6 +47,18 @@ const shipped = [
     name: '@jsquash/jxl',
     where: 'Image worker (JPEG XL reading: libjxl, highway, skcms, brotli), loaded on demand',
   },
+  { name: 'pdf-lib', where: 'Image worker (writing and shrinking PDFs), loaded on demand' },
+  { name: '@pdf-lib/standard-fonts', parent: 'pdf-lib', where: 'Image worker, via pdf-lib' },
+  { name: '@pdf-lib/upng', parent: 'pdf-lib', where: 'Image worker, via pdf-lib (PNG reading)' },
+  { name: 'tslib', parent: 'pdf-lib', where: 'Image worker, via pdf-lib' },
+  {
+    name: 'pdfjs-dist',
+    where: 'Extension page (drawing PDF pages) and vendor/pdf.worker.min.mjs, loaded on demand',
+  },
+  {
+    name: 'xlsx',
+    where: 'Image worker (reading and writing CSV and Excel files), loaded on demand',
+  },
 ];
 
 /** Libraries compiled into the WebAssembly codecs above, with their license and patent texts. */
@@ -63,6 +75,14 @@ const embedded = [
   ['highway (inside @jsquash/jxl)', 'highway-LICENSE.txt'],
   ['skcms (inside @jsquash/jxl)', 'skcms-LICENSE.txt'],
   ['brotli (inside @jsquash/jxl)', 'brotli-LICENSE.txt'],
+];
+
+/** Files shipped as they are: the display typeface of the extension's own pages. */
+const assets = [
+  [
+    'Instrument Serif (fonts/instrument-serif-*.woff2), SIL Open Font License 1.1. Used on the extension pages only.',
+    'InstrumentSerif-OFL.txt',
+  ],
 ];
 
 function licenseText(dir) {
@@ -93,7 +113,7 @@ for (const item of shipped) {
     '',
   );
 }
-for (const [name, file] of embedded) {
+for (const [name, file] of [...embedded, ...assets]) {
   const text = readFileSync(join(root, 'docs/licenses', file), 'utf8').trim();
   sections.push('='.repeat(78), name, '='.repeat(78), '', text, '');
 }
@@ -102,5 +122,5 @@ const out = join(root, 'public/licenses');
 mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'THIRD_PARTY_NOTICES.txt'), `${sections.join('\n')}\n`);
 console.log(
-  `Wrote notices for ${shipped.length} packages and ${embedded.length} embedded components.`,
+  `Wrote notices for ${shipped.length} packages, ${embedded.length} embedded components and ${assets.length} font.`,
 );

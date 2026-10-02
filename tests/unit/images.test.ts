@@ -264,6 +264,80 @@ describe('compressToTarget', () => {
   });
 });
 
+describe('fewer pixels, when no quality fits at full size (asked about first)', () => {
+  const base = { width: 6000, height: 4000, format: 'jpeg' as const };
+  const shrink = { minWidth: 1, minHeight: 1 };
+  /** Bytes grow with quality, and with pixels raised to `power` (real photos: under 1). */
+  function encoder(bytesPerPixel: number, power = 1) {
+    const calls: [number, number, number][] = [];
+    const encode: Encoder = async (width, height, quality) => {
+      calls.push([width, height, quality]);
+      const size = Math.round((width * height) ** power * bytesPerPixel * quality ** 3);
+      return new Blob([new Uint8Array(size)], { type: 'image/jpeg' });
+    };
+    return { encode, calls };
+  }
+  /** The width at which `size` stops fitting, found the slow way. */
+  function largestFitting(size: (width: number) => number, target: number): number {
+    let width = base.width;
+    while (size(width) > target) width--;
+    return width;
+  }
+
+  it('shrinks only as much as needed: just under the largest size that fits', async () => {
+    const { encode, calls } = encoder(0.5);
+    const target = 500_000 * QUALITY.margin;
+    const result = await compressToTarget({ ...base, maxBytes: 500_000, shrink }, encode);
+    expect(result.blob.size).toBeLessThanOrEqual(target);
+    expect(result.quality).toBe(QUALITY.fit);
+    const best = largestFitting(
+      (width) => Math.round(width * Math.round((width * 2) / 3) * 0.5 * QUALITY.fit ** 3),
+      target,
+    );
+    expect(result.width).toBeLessThanOrEqual(best);
+    expect(result.width).toBeGreaterThanOrEqual(best * (1 - QUALITY.fitPrecision - 0.01));
+    // The shape never changes.
+    expect(result.width / result.height).toBeCloseTo(1.5, 2);
+    expect(calls.length).toBeLessThanOrEqual(2 + QUALITY.fitSteps);
+  });
+  it('finds it too for pictures whose size falls more slowly than their pixels', async () => {
+    const { encode } = encoder(4, 0.8);
+    const target = 300_000 * QUALITY.margin;
+    const result = await compressToTarget({ ...base, maxBytes: 300_000, shrink }, encode);
+    expect(result.blob.size).toBeLessThanOrEqual(target);
+    const best = largestFitting(
+      (width) => Math.round((width * Math.round((width * 2) / 3)) ** 0.8 * 4 * QUALITY.fit ** 3),
+      target,
+    );
+    expect(result.width).toBeGreaterThanOrEqual(best * (1 - QUALITY.fitPrecision - 0.01));
+  });
+  it('keeps full size whenever quality alone can meet the limit', async () => {
+    const { encode, calls } = encoder(0.5);
+    const result = await compressToTarget({ ...base, maxBytes: 2_000_000, shrink }, encode);
+    expect([result.width, result.height]).toEqual([6000, 4000]);
+    expect(calls.every(([width]) => width === 6000)).toBe(true);
+  });
+  it('shrinks a lossless format the same way, since pixels are all it holds', async () => {
+    const { encode } = encoder(0.5);
+    const result = await compressToTarget(
+      { ...base, format: 'png', maxBytes: 3_000_000, shrink },
+      encode,
+    );
+    expect(result.width).toBeLessThan(6000);
+    expect(result.blob.size).toBeLessThanOrEqual(3_000_000 * QUALITY.margin);
+  });
+  it('never goes below the sides the website asks for at least', async () => {
+    const { encode, calls } = encoder(0.5);
+    await expect(
+      compressToTarget(
+        { ...base, maxBytes: 500_000, shrink: { minWidth: 3000, minHeight: 1 } },
+        encode,
+      ),
+    ).rejects.toThrow('target-unreachable');
+    expect(calls.every(([width]) => width >= 3000)).toBe(true);
+  });
+});
+
 describe('quality score', () => {
   const gradient = (width: number, height: number, noise = 0) => {
     const pixels = new Uint8ClampedArray(width * height * 4);

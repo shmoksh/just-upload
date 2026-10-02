@@ -113,13 +113,13 @@ try {
       display: 'grid',
       placeItems: 'center',
       minHeight: '100vh',
-      background: '#e8f1eb',
+      background: '#eef0ed',
     });
     Object.assign(document.querySelector('.popup').style, {
       width: '340px',
       background: '#ffffff',
       borderRadius: '16px',
-      boxShadow: '0 0 0 1px rgb(24 52 36 / 7%), 0 18px 48px -12px rgb(24 52 36 / 26%)',
+      boxShadow: '0 0 0 1px rgb(15 26 20 / 7%), 0 18px 48px -12px rgb(15 26 20 / 26%)',
       transform: 'scale(1.5)',
     });
   });
@@ -129,24 +129,30 @@ try {
   // 5. The welcome page: what it does, at a glance.
   const welcome = await context.newPage();
   await welcome.goto(`chrome-extension://${id}/onboarding.html`);
-  // Let the opening animation of the receipt card finish.
-  await welcome.waitForTimeout(3_000);
+  // Let the first file on the hero get its "accepted" stamp.
+  await welcome.waitForTimeout(3_200);
   await welcome.screenshot({ path: `${out}/5-welcome.png` });
   console.log(`Saved 5 screenshots to ${out}`);
 
-  // The small promo tile: the logo, the name and the promise, nothing else.
+  // The small promo tile: the logo, the name and the promise, nothing else, with the name
+  // in the display face the extension's pages use.
   const logo = await readFile(`${root}public/logo.svg`, 'utf8');
+  const serif = (await readFile(`${root}public/fonts/instrument-serif-latin.woff2`)).toString(
+    'base64',
+  );
   const tile = await context.newPage();
   await tile.setViewportSize({ width: 440, height: 280 });
   await tile.setContent(`<!doctype html>
+    <style>@font-face{font-family:Serif;src:url(data:font/woff2;base64,${serif}) format('woff2')}</style>
     <body style="margin:0;height:280px;display:grid;place-items:center;background:#ffffff;
-      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#26352c">
-      <div style="display:grid;justify-items:center;gap:14px;text-align:center">
-        <div style="width:84px;height:84px">${logo.replace('<svg ', '<svg width="84" height="84" ')}</div>
-        <div style="font-size:34px;font-weight:700;letter-spacing:-0.02em">Just Upload</div>
-        <div style="font-size:17px;color:#5d6b62">Upload any image. We make it work.</div>
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f1a14">
+      <div style="display:grid;justify-items:center;gap:12px;text-align:center">
+        <div style="width:76px;height:76px">${logo.replace('<svg ', '<svg width="76" height="76" ')}</div>
+        <div style="font:400 48px/1 Serif;letter-spacing:-0.02em">Just Upload</div>
+        <div style="font-size:17px;color:#5c6660">Uploads that just work.</div>
       </div>
     </body>`);
+  await tile.evaluate(() => document.fonts.ready);
   await tile.screenshot({ path: `${root}docs/store/promo-440x280.png` });
   console.log('Saved the promo tile to docs/store/promo-440x280.png');
 } finally {

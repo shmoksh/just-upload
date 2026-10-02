@@ -97,8 +97,11 @@ describe('mightNeedWork (synchronous, before any file read)', () => {
     );
     expect(mightNeedWork(file('a.jpg', 'image/jpeg'), rules({ minWidth: 10 }))).toBe(true);
   });
-  it('ignores non-image fields, empty files and formats we cannot handle', () => {
-    expect(mightNeedWork(file('a.heic', 'image/heic'), parseAccept('application/pdf'))).toBe(false);
+  it('ignores fields it cannot fill, empty files and formats we cannot handle', () => {
+    // A photo becomes a PDF where only a PDF is taken; a video field is not ours.
+    expect(mightNeedWork(file('a.heic', 'image/heic'), parseAccept('application/pdf'))).toBe(true);
+    expect(mightNeedWork(file('a.heic', 'image/heic'), parseAccept('video/mp4'))).toBe(false);
+    expect(mightNeedWork(file('cv.docx', ''), parseAccept('application/pdf'))).toBe(false);
     expect(mightNeedWork(file('a.heic', 'image/heic', 0), parseAccept('image/jpeg'))).toBe(false);
     expect(
       mightNeedWork(file('a.psd', 'image/vnd.adobe.photoshop'), parseAccept('image/jpeg')),

@@ -125,6 +125,29 @@ function receiptRow(receipt: Receipt): HTMLElement {
   );
 }
 
+/**
+ * The quality kept, as a ring that fills to the figure: nearly closed at 98%, open (and
+ * grey-green) when the loss would show. A range, from several files, is written out instead.
+ */
+function gauge(quality: string): HTMLElement {
+  if (!/^\d{1,3}%$/.test(quality)) return h('b', {}, quality);
+  const ring = svgElement('svg', { viewBox: '0 0 40 40', 'aria-hidden': 'true' });
+  ring.append(
+    svgElement('circle', { class: 'ju-gauge-track', cx: '20', cy: '20', r: '17' }),
+    svgElement('circle', {
+      class: 'ju-gauge-fill',
+      cx: '20',
+      cy: '20',
+      r: '17',
+      pathLength: '100',
+    }),
+  );
+  const element = h('span', { class: 'ju-gauge' }, ring as unknown as Node, h('b', {}, quality));
+  // Through the CSSOM: a page's style rules may forbid inline style attributes.
+  element.style.setProperty('--ju-value', String(Number.parseInt(quality, 10)));
+  return element;
+}
+
 export interface ToastAction {
   label: string;
   run(): void;
@@ -196,7 +219,11 @@ class Toast {
     // The figure in the corner: quality kept when ready, progress while preparing.
     this.meter.replaceChildren();
     this.meter.classList.toggle('is-low', Boolean(receipt?.noticeable));
-    if (receipt) this.meter.append(h('b', {}, receipt.quality), h('span', {}, 'quality kept'));
+    if (receipt?.quality)
+      this.meter.append(
+        gauge(receipt.quality),
+        h('span', { class: 'ju-meter-label' }, 'quality kept'),
+      );
 
     const duration = DURATION[kind];
     this.timer.hidden = !duration;

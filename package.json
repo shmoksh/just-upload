@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Makes image uploads just work: converts any image format and fits size limits on your device when a website needs it.",
+  "description": "Fixes files websites refuse: images, PDFs, CSV and Excel. Converts and fits size limits, right on your device.",
   "license": "MIT",
   "packageManager": "pnpm@10.12.4",
   "engines": {
@@ -36,10 +36,13 @@
     "gifenc": "1.0.3",
     "libheif-js": "1.23.2",
     "pako": "1.0.11",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.3.289",
     "pica": "10.0.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "utif2": "4.1.0"
+    "utif2": "4.1.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

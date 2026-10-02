@@ -8,11 +8,14 @@ export interface ConfirmRequest {
   decision: Decision;
   info: ImageInfo;
   requirements: UploadRequirements;
-  preview: Blob;
+  /** What the change looks like; a PDF made smaller has no picture to show. */
+  preview?: Blob;
   /** Declining removes the file instead of keeping it (see picker widening). */
   removeOnDecline: boolean;
   /** For a quality question: the share of the original's look the prepared file keeps. */
   quality?: number;
+  /** For a smaller copy: its pixel size (for a PDF, its largest picture's). */
+  fitted?: { width: number; height: number };
 }
 export interface ConfirmAnswer {
   crop?: CropRect;
@@ -58,23 +61,28 @@ export async function confirmChange(
 ): Promise<ConfirmAnswer | null> {
   closeOpenDialog?.();
   if (signal.aborted) return null;
-  let preview: ImageBitmap;
-  try {
-    preview = await createImageBitmap(request.preview);
-  } catch {
-    return null;
+  let preview: ImageBitmap | undefined;
+  if (request.preview) {
+    try {
+      preview = await createImageBitmap(request.preview);
+    } catch {
+      return null;
+    }
   }
   if (signal.aborted) {
-    preview.close();
+    preview?.close();
     return null;
   }
 
   const { decision, info, requirements } = request;
-  const copy = dialogCopy(decision, requirements, request.removeOnDecline, request.quality);
+  const copy = dialogCopy(decision, requirements, request.removeOnDecline, request.quality, {
+    ...info,
+    fitted: request.fitted,
+  });
   const fill = decision.consents.includes('transparency') ? '#ffffff' : undefined;
   const ratio = targetRatio(requirements);
   const editor: CropEditor | undefined =
-    decision.consents.includes('crop') && ratio
+    decision.consents.includes('crop') && ratio && preview
       ? createCropEditor({ preview, width: info.width, height: info.height, ratio, fill })
       : undefined;
 
@@ -92,9 +100,9 @@ export async function confirmChange(
     h('p', { class: 'ju-dialog-brand' }, logo(), 'Just Upload'),
     h('h2', { id: 'ju-title' }, copy.title),
     h('p', { id: 'ju-body' }, copy.body),
-    editor?.element ?? createPreview(preview, { fill, label: 'Your image' }),
+    editor?.element ?? (preview && createPreview(preview, { fill, label: 'Your image' })),
     request.quality !== undefined &&
-      decision.consents.includes('quality') &&
+      (decision.consents.includes('quality') || decision.consents.includes('shrink')) &&
       qualityScale(request.quality),
     fill && h('div', { class: 'ju-chip' }, 'Background: White'),
     copy.notes.length > 0 &&
@@ -123,7 +131,7 @@ export async function confirmChange(
         if (dialog.open) dialog.close();
         editor?.destroy();
         layer.remove();
-        preview.close();
+        preview?.close();
         if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
       } finally {
         resolve(answer);

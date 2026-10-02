@@ -175,9 +175,9 @@ describe('compatible files', () => {
     expect(prepare).not.toHaveBeenCalled();
     expect(ui.failure).not.toHaveBeenCalled();
   });
-  it('are never touched on non-image fields or while paused', () => {
-    const pdf = page('<input type="file" accept="application/pdf">');
-    choose(pdf, [heic()]);
+  it('are never touched on fields it cannot fill or while paused', () => {
+    const video = page('<input type="file" accept="video/mp4">');
+    choose(video, [heic()]);
     expect(changes()).toEqual([['IMG_1.HEIC']]);
     seen = [];
     hostnames = ['example.com', 'paused.example'];
@@ -336,6 +336,37 @@ describe('asking before visible quality loss', () => {
     expect(transform).not.toHaveBeenCalled();
     expect(onFixed).toHaveBeenCalledWith([expect.objectContaining({ qualityKept: 91 })]);
   });
+  it('asks before using a copy with fewer pixels, showing its size, even if it looks the same', async () => {
+    prepare.mockResolvedValueOnce({
+      kind: 'fixed',
+      result: {
+        ...converted('IMG_1.jpg'),
+        qualityKept: 99,
+        resizedToFit: true,
+        sizeLimited: true,
+        finalWidth: 1500,
+        finalHeight: 2000,
+      },
+    });
+    const input = page('<input type="file" accept="image/jpeg">');
+    choose(input, [heic()]);
+    await vi.waitFor(() => expect(changes()).toEqual([['IMG_1.jpg']]));
+    expect(ui.confirm).toHaveBeenCalledTimes(1);
+    expect(ui.confirm.mock.calls[0]![0]).toMatchObject({
+      quality: 99,
+      decision: { consents: ['shrink'] },
+      fitted: { width: 1500, height: 2000 },
+    });
+    expect(transform).not.toHaveBeenCalled();
+  });
+  it('gives the site the original when the person declines fewer pixels', async () => {
+    prepare.mockResolvedValueOnce(kept(95, true));
+    ui.confirm.mockResolvedValueOnce(null);
+    const input = page('<input type="file" accept="image/jpeg">');
+    choose(input, [heic()]);
+    await vi.waitFor(() => expect(changes()).toEqual([['IMG_1.HEIC']]));
+    expect(onFixed).not.toHaveBeenCalled();
+  });
   it('gives the site the original when the person declines', async () => {
     prepare.mockResolvedValueOnce(kept(91));
     ui.confirm.mockResolvedValueOnce(null);
@@ -391,7 +422,7 @@ describe('failing open', () => {
     choose(input, [original]);
     await vi.waitFor(() => expect(changes()).toEqual([['IMG_1.HEIC']]));
     expect(selections.get(input)).toEqual([original]);
-    expect(ui.failure).toHaveBeenCalledWith('damaged', false);
+    expect(ui.failure).toHaveBeenCalledWith('damaged', false, 'image');
   });
   it('keeps a technical note of the failure, with the rules it read', async () => {
     prepare.mockRejectedValueOnce(new ProcessingError('damaged'));
@@ -424,7 +455,7 @@ describe('failing open', () => {
     );
     choose(input, [fileOf(pngBytes({ truncated: true }), 'broken.png', 'image/png')]);
     await vi.waitFor(() => expect(changes()).toEqual([['broken.png']]));
-    expect(ui.failure).toHaveBeenCalledWith('damaged', false);
+    expect(ui.failure).toHaveBeenCalledWith('damaged', false, 'image');
   });
   it('explains when an image is too large to prepare safely', async () => {
     const input = page('<input type="file" accept="image/jpeg">');
@@ -432,7 +463,7 @@ describe('failing open', () => {
     Object.defineProperty(huge, 'size', { value: 6 * 1024 ** 3 });
     choose(input, [huge]);
     await vi.waitFor(() => expect(changes()).toEqual([['huge.heic']]));
-    expect(ui.failure).toHaveBeenCalledWith('too-large-to-process', false);
+    expect(ui.failure).toHaveBeenCalledWith('too-large-to-process', false, 'image');
   });
 });
 
@@ -536,7 +567,7 @@ describe('dropping files on an upload area', () => {
     );
     dropFiles(target, [heic('a.heic')]);
     await vi.waitFor(() => expect(dropped).toEqual([['a.heic']]));
-    expect(ui.failure).toHaveBeenCalledWith('damaged', false);
+    expect(ui.failure).toHaveBeenCalledWith('damaged', false, 'image');
   });
   it('does nothing when the area has no single upload field to read rules from', () => {
     document.body.innerHTML =
@@ -609,7 +640,7 @@ describe('widening the file picker', () => {
     selections.set(input, [earlier]);
     input.click();
     choose(input, [heic()]);
-    await vi.waitFor(() => expect(ui.failure).toHaveBeenCalledWith('damaged', true));
+    await vi.waitFor(() => expect(ui.failure).toHaveBeenCalledWith('damaged', true, 'image'));
     expect(seen).toEqual([]);
     expect(selections.get(input)).toEqual([earlier]);
   });

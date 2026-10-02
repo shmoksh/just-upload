@@ -1,20 +1,34 @@
 import type {
   Consent,
   Decision,
-  ImageFormat,
+  FileFormat,
+  FileOutput,
+  ImageInfo,
   TransformResult,
   UploadRequirements,
 } from '../models';
+import { guessFormat } from '../compatibility';
 import { LOOKS_THE_SAME, targetRatio } from '../decision';
-import { FORMATS, formatFromExtension, formatFromMime } from '../formats';
+import { FORMATS, formatFromExtension, formatFromMime, isImage, isSheet } from '../formats';
 import type { ErrorCode } from '../utils/errors';
 import { formatBytes } from '../utils/files';
 
 // Every word a person sees on a website comes from here. Plain language only: no
 // encoders or pixel math. Quality is one number, the share of the original's look kept.
 
-export const formatLabel = (format: ImageFormat): string =>
-  format === 'unknown' ? 'image' : FORMATS[format].label;
+export const formatLabel = (format: FileFormat | FileOutput): string =>
+  format === 'unknown' ? 'file' : FORMATS[format].label;
+
+/** What a selection is called in notes: "image", "PDF", or "file" for anything else. */
+export function nounFor(files: readonly Pick<File, 'name' | 'type'>[]): string {
+  const nouns = new Set(
+    files.map((file) => {
+      const format = guessFormat(file);
+      return format === 'pdf' ? 'PDF' : isImage(format) ? 'image' : 'file';
+    }),
+  );
+  return nouns.size === 1 ? [...nouns][0]! : 'file';
+}
 
 /** One side of a change, shown as a small tag: "HEIC" and "3.1 MB", or "600 × 600". */
 export interface ReceiptTag {
@@ -28,8 +42,9 @@ export interface Receipt {
   to?: ReceiptTag;
   /** Words in place of tags, e.g. "3 images, in order". */
   note?: string;
-  quality: string;
-  /** Below what the eye can tell apart; shown in amber. */
+  /** Not for spreadsheets: converting their data loses nothing to measure. */
+  quality?: string;
+  /** Below what the eye can tell apart; shown in grey-green rather than green. */
   noticeable: boolean;
   /** The pixel change, when the image was made smaller or larger: "3024 × 4032 → 2872 × 3829". */
   pixels?: { from: string; to: string };
@@ -50,13 +65,22 @@ const pixels = (width: number, height: number) => `${width} × ${height}`;
 /** "HEIC → JPG · 5.8 MB → 1.8 MB · Quality kept: 98%" */
 export function successCopy(results: TransformResult[]): ToastCopy {
   if (results.length > 1) {
-    const kept = results.map((result) => result.qualityKept);
+    const kept = results
+      .filter((result) => !isSheet(result.finalFormat))
+      .map((result) => result.qualityKept);
+    const noun = kept.length === results.length ? 'images' : 'files';
+    if (!kept.length)
+      return {
+        title: 'Ready to upload',
+        detail: `${results.length} files prepared, in the same order`,
+        receipt: { note: `${results.length} files, in the same order`, noticeable: false },
+      };
     const [low, high] = [Math.min(...kept), Math.max(...kept)];
     return {
       title: 'Ready to upload',
-      detail: `${results.length} images prepared, in the same order · ${qualityText(low, high)}`,
+      detail: `${results.length} ${noun} prepared, in the same order · ${qualityText(low, high)}`,
       receipt: {
-        note: `${results.length} images, in the same order`,
+        note: `${results.length} ${noun}, in the same order`,
         quality: percent(low, high),
         noticeable: low < LOOKS_THE_SAME,
       },
@@ -73,6 +97,8 @@ export function successCopy(results: TransformResult[]): ToastCopy {
   else if (result.changes.includes('raised-to-minimum'))
     parts.push('Brought up to the site’s minimum');
   else parts.push('Made smaller');
+  if (result.changes.includes('first-page')) parts.push('First page');
+  if (result.changes.includes('first-sheet')) parts.push('First sheet');
   // A converted JPG is often larger than its HEIC; only a smaller size is worth mentioning.
   // A file brought up to a site's minimum grew on purpose: that is worth showing too.
   const smaller =
@@ -81,13 +107,15 @@ export function successCopy(results: TransformResult[]): ToastCopy {
   if (smaller) {
     parts.push(`${formatBytes(result.originalSize)} → ${formatBytes(result.finalSize)}`);
   }
-  parts.push(qualityText(result.qualityKept));
+  // A spreadsheet's data is carried over whole; there is no look to measure.
+  const measured = !isSheet(result.finalFormat);
+  if (measured) parts.push(qualityText(result.qualityKept));
 
   const before = smaller ? formatBytes(result.originalSize) : undefined;
   const after = smaller ? formatBytes(result.finalSize) : undefined;
   const receipt: Receipt = {
-    quality: percent(result.qualityKept),
-    noticeable: result.qualityKept < LOOKS_THE_SAME,
+    quality: measured ? percent(result.qualityKept) : undefined,
+    noticeable: measured && result.qualityKept < LOOKS_THE_SAME,
   };
   if (converted) {
     receipt.from = { name: formatLabel(result.originalFormat), size: before };
@@ -113,8 +141,8 @@ export function successCopy(results: TransformResult[]): ToastCopy {
   return { title: 'Ready to upload', detail: parts.join(' · '), receipt };
 }
 
-export function processingCopy(count: number, fraction?: number): ToastCopy {
-  const title = count > 1 ? 'Preparing images…' : 'Preparing image…';
+export function processingCopy(count: number, fraction?: number, noun = 'image'): ToastCopy {
+  const title = count > 1 ? `Preparing ${noun}s…` : `Preparing ${noun}…`;
   // Only very large images take long enough for progress to mean anything.
   return { title: fraction === undefined ? title : `${title} ${Math.floor(fraction * 100)}%` };
 }
@@ -123,23 +151,23 @@ export function processingCopy(count: number, fraction?: number): ToastCopy {
  * When preparation fails, the site gets the original (fail open), unless the file only
  * became selectable because Just Upload widened the picker; then it is removed.
  */
-export function failureCopy(code: ErrorCode, removed: boolean): ToastCopy {
+export function failureCopy(code: ErrorCode, removed: boolean, noun = 'image'): ToastCopy {
   if (removed)
-    return { title: 'Couldn’t prepare this image', detail: 'Please choose a different file.' };
+    return { title: `Couldn’t prepare this ${noun}`, detail: 'Please choose a different file.' };
   if (code === 'too-large-to-process') {
     return {
-      title: 'This image is too large to prepare at full size',
+      title: `This ${noun} is too large to prepare at full size`,
       detail: 'Your original file is still selected.',
     };
   }
   if (code === 'target-unreachable') {
     return {
-      title: 'Couldn’t fit this image at full size',
+      title: `Couldn’t make this ${noun} small enough`,
       detail: 'Your original file is still selected.',
     };
   }
   return {
-    title: 'Couldn’t safely prepare this image',
+    title: `Couldn’t safely prepare this ${noun}`,
     detail: 'Your original file is still selected.',
   };
 }
@@ -157,12 +185,24 @@ function shapeName(ratio: number): string {
   return ratio > 1 ? 'a wide' : 'a tall';
 }
 
+type Counts = Partial<Pick<ImageInfo, 'pages' | 'sheets' | 'format' | 'width' | 'height'>> & {
+  /** For a smaller copy: its pixel size (for a PDF, its largest picture's). */
+  fitted?: { width: number; height: number };
+};
+
+/** What a question about a prepared file calls it: the image, the page, or the PDF. */
+function nounOf(decision: Decision, counts: Counts): 'image' | 'page' | 'PDF' {
+  if (counts.format !== 'pdf') return 'image';
+  return decision.outputFormat === 'pdf' ? 'PDF' : 'page';
+}
+
 const LEAD: Record<
   Consent,
   (
     requirements: UploadRequirements,
     decision: Decision,
     quality: number,
+    counts: Counts,
   ) => Omit<DialogCopy, 'notes' | 'decline'>
 > = {
   crop: (requirements) => ({
@@ -190,10 +230,49 @@ const LEAD: Record<
     body: 'Your image will be enlarged to fit. It may look a little soft.',
     confirm: 'Enlarge & upload',
   }),
-  quality: (_requirements, _decision, quality) => ({
-    title: 'Some quality would be lost',
-    body: `Quality kept: ${quality}% of your photo. That’s the best that fits this site’s limits.`,
-    confirm: `Upload at ${quality}%`,
+  shrink: (requirements, decision, quality, counts) => {
+    const noun = nounOf(decision, counts);
+    const limit = requirements.maxBytes ? formatBytes(requirements.maxBytes) : 'its limit';
+    const { width, height, fitted } = counts;
+    const change =
+      width && height && fitted
+        ? `${pixels(width, height)} → ${pixels(fitted.width, fitted.height)}`
+        : undefined;
+    const kept =
+      quality >= LOOKS_THE_SAME
+        ? `It keeps ${quality}% of its quality, so it looks the same on a screen.`
+        : `It keeps ${quality}% of its quality.`;
+    return {
+      title: `This ${noun} can’t fit ${limit} at full size`,
+      body:
+        noun === 'PDF'
+          ? `To fit, its pictures need fewer pixels${change ? ` (the largest goes from ${change.replace(' → ', ' to ')})` : ''}. Its text and layout stay the same, and the pictures keep ${quality}% of their quality.`
+          : `To fit, it needs fewer pixels${change ? `: ${change}` : ''}. ${kept}`,
+      confirm: 'Make it smaller',
+    };
+  },
+  quality: (_requirements, decision, quality, counts) => {
+    const of =
+      counts.format !== 'pdf'
+        ? 'your photo'
+        : decision.outputFormat === 'pdf'
+          ? 'the pictures in your PDF'
+          : 'the page';
+    return {
+      title: 'Some quality would be lost',
+      body: `Quality kept: ${quality}% of ${of}. That’s the best that fits this site’s limits.`,
+      confirm: `Upload at ${quality}%`,
+    };
+  },
+  page: (_requirements, decision, _quality, counts) => ({
+    title: `This site takes one ${formatLabel(decision.outputFormat ?? 'jpeg')} image`,
+    body: `Your PDF has ${counts.pages ?? 'several'} pages. The first page will become the image.`,
+    confirm: 'Use the first page',
+  }),
+  sheet: (_requirements, decision, _quality, counts) => ({
+    title: `This site takes a ${formatLabel(decision.outputFormat ?? 'csv')} file`,
+    body: `Your workbook has ${counts.sheets?.length ?? 'several'} sheets, and a CSV file holds one, so “${counts.sheets?.[0] ?? 'the first sheet'}” will be used.`,
+    confirm: 'Use the first sheet',
   }),
 };
 
@@ -203,7 +282,10 @@ const NOTE: Record<Consent, string> = {
   animation: 'Only the first frame (or page) will be used.',
   palette: 'It will be saved as a GIF with fewer colours.',
   upscale: 'It will be enlarged, so it may look a little soft.',
+  shrink: 'It will have fewer pixels, to fit the limit.',
   quality: 'Some quality will be lost.',
+  page: 'Only the first page will be used.',
+  sheet: 'Only the first sheet will be used.',
 };
 
 export function dialogCopy(
@@ -211,10 +293,11 @@ export function dialogCopy(
   requirements: UploadRequirements,
   removeOnDecline: boolean,
   quality = 100,
+  counts: Counts = {},
 ): DialogCopy {
   const [lead = 'quality', ...others] = decision.consents;
   return {
-    ...LEAD[lead](requirements, decision, quality),
+    ...LEAD[lead](requirements, decision, quality, counts),
     notes: others.map((consent) => NOTE[consent]),
     decline: removeOnDecline ? 'Cancel' : 'Use original',
   };
@@ -271,7 +354,7 @@ export function problemReport(
   problems: readonly {
     at: string;
     code: ErrorCode;
-    format: ImageFormat;
+    format: FileFormat;
     bytes: number;
     rules: string;
   }[],

@@ -134,7 +134,7 @@ function Popup() {
         )}
       </section>
 
-      <section className="figures" aria-label="Images fixed">
+      <section className="figures" aria-label="Files fixed">
         <div className="figure">
           <Count value={session} />
           <span className="label">fixed this session</span>

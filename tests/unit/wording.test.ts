@@ -8,6 +8,10 @@ import { parseText } from '../../src/requirements';
 
 const JPG = 'image/jpeg';
 const PNG = 'image/png';
+const PDF = 'application/pdf';
+const CSV = 'text/csv';
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const XLS = 'application/vnd.ms-excel';
 const KB = 1_000;
 const MB = 1_000_000;
 
@@ -102,7 +106,14 @@ const cases: [string, Expected][] = [
   ['Photo should be in JPG/JPEG format only', { acceptedMimeTypes: [JPG] }],
   ['Upload a PNG or JPEG image', { acceptedMimeTypes: [JPG, PNG] }],
   ['Please upload the photo in .jpg format', { acceptedMimeTypes: [JPG] }],
-  ['Accepted file formats: JPG, JPEG, PNG and PDF', { acceptedMimeTypes: [JPG, PNG] }],
+  ['Accepted file formats: JPG, JPEG, PNG and PDF', { acceptedMimeTypes: [PDF, JPG, PNG] }],
+  // Documents and spreadsheets
+  ['PDF only, max 2 MB', { acceptedMimeTypes: [PDF], maxBytes: 2 * MB }],
+  ['Upload your resume as a PDF', { acceptedMimeTypes: [PDF] }],
+  ['Scanned copy (PDF or JPG, max 500 KB)', { acceptedMimeTypes: [PDF, JPG], maxBytes: 500 * KB }],
+  ['CSV files only', { acceptedMimeTypes: [CSV] }],
+  ['Accepted formats: .csv, .xlsx', { acceptedMimeTypes: [XLSX, CSV] }],
+  ['Upload an Excel file', { acceptedMimeTypes: [XLS, XLSX] }],
   ['Images must be JPEG or PNG', { acceptedMimeTypes: [JPG, PNG] }],
   ['Format: JPG', { acceptedMimeTypes: [JPG] }],
   ['File type: JPEG, PNG', { acceptedMimeTypes: [JPG, PNG] }],

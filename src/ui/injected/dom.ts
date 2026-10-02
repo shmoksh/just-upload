@@ -79,25 +79,25 @@ export function logo(): SVGSVGElement {
   svg.setAttribute('viewBox', '0 0 128 128');
   svg.setAttribute('aria-hidden', 'true');
   const parts: [string, Record<string, string>][] = [
-    ['rect', { width: '128', height: '128', rx: '30', fill: '#219356' }],
+    ['rect', { width: '128', height: '128', rx: '30', fill: '#a2ed76' }],
     [
       'path',
       {
         d: 'M56 96V32M32 55l24-24 24 24',
         fill: 'none',
-        stroke: '#fff',
+        stroke: '#0e3a26',
         'stroke-width': '13',
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
       },
     ],
-    ['circle', { cx: '92', cy: '92', r: '22', fill: '#fff' }],
+    ['circle', { cx: '92', cy: '92', r: '22', fill: '#0e3a26' }],
     [
       'path',
       {
         d: 'm82 92 7 7 13-14',
         fill: 'none',
-        stroke: '#219356',
+        stroke: '#a2ed76',
         'stroke-width': '7',
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',

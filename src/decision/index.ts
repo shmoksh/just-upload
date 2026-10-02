@@ -36,10 +36,13 @@ const SILENT_UPSCALE_LIMIT = 1.1;
 /** The consent that leads a confirmation; its wording and button come first. */
 const CONSENT_ORDER: readonly Consent[] = [
   'crop',
+  'page',
+  'sheet',
   'transparency',
   'animation',
   'palette',
   'upscale',
+  'shrink',
   'quality',
 ];
 
@@ -156,13 +159,14 @@ export function decide(info: ImageInfo, requirements: UploadRequirements): Decis
   }
   if (info.transparent && !keepsTransparency(outputFormat)) consents.add('transparency');
   if (info.animated) consents.add('animation');
+  if ((info.pages ?? 1) > 1) consents.add('page');
   // 256 colours can make a photo look banded; asked unless it already was a GIF.
   if (outputFormat === 'gif' && info.format !== 'gif') consents.add('palette');
   const scale = requiredScale(width, height, requirements);
   if (scale > SILENT_UPSCALE_LIMIT) consents.add('upscale');
   // Shrinking to dimensions the website itself states is what it asked for. Shrinking
-  // for any other reason (a file-size limit, or more pixels than can be prepared) is
-  // asked about after the fact, from the result (see needsQualityConsent).
+  // for any other reason (a file-size limit no quality can meet at full size) is asked
+  // about once the smaller copy is ready, from the result (see needsShrinkConsent).
   const ordered = CONSENT_ORDER.filter((consent) => consents.has(consent));
   return {
     action: ordered.length ? 'USER_CONFIRMATION' : 'AUTO_FIX',
@@ -201,4 +205,22 @@ export function needsQualityConsent(
   return (
     preferences.askBeforeQualityChanges && result.sizeLimited && result.qualityKept < LOOKS_THE_SAME
   );
+}
+
+/**
+ * Whether a prepared file has fewer pixels than the website asks for, to fit its
+ * file-size limit. Always asked, whatever the quality setting: Just Upload never changes
+ * a file's pixel size on its own unless the website states one.
+ */
+export function needsShrinkConsent(result: Pick<TransformResult, 'resizedToFit'>): boolean {
+  return result.resizedToFit;
+}
+
+/** What to ask before a prepared file is used, if anything: fewer pixels, or quality. */
+export function consentFor(
+  result: Pick<TransformResult, 'qualityKept' | 'sizeLimited' | 'resizedToFit'>,
+  preferences: Preferences,
+): 'shrink' | 'quality' | undefined {
+  if (needsShrinkConsent(result)) return 'shrink';
+  return needsQualityConsent(result, preferences) ? 'quality' : undefined;
 }

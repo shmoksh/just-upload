@@ -9,7 +9,7 @@ import type {
 } from '../models';
 import { safeMinimum } from '../compatibility';
 import { decide, statesPixelSize, transformOptions } from '../decision';
-import { isLossy, keepsTransparency, mimeOf } from '../formats';
+import { isLossy, isOutputFormat, keepsTransparency, mimeOf } from '../formats';
 import { fail, type ErrorCode } from '../utils/errors';
 import { ICO_MAX_SIZE } from './codecs/ico';
 import { compressToTarget, QUALITY } from './compress';
@@ -88,13 +88,16 @@ export async function transformDecoded(
   options: TransformOptions,
 ): Promise<TransformResult> {
   const { bitmap, info } = decoded;
+  // Documents are written elsewhere (see documents/); this writes images.
+  const outputFormat = options.outputFormat;
+  if (!isOutputFormat(outputFormat)) return fail('unsupported-format');
   if (info.animated && !options.allowAnimationLoss) fail('needs-animation-consent');
   // JPEG and BMP cannot hold transparency.
-  const flatten = info.transparent && !keepsTransparency(options.outputFormat);
+  const flatten = info.transparent && !keepsTransparency(outputFormat);
   if (flatten && !options.allowTransparencyLoss) fail('needs-transparency-consent');
   // An ICO entry cannot be larger than 256 × 256; that is the format, not a choice.
   const rules: UploadRequirements =
-    options.outputFormat === 'ico'
+    outputFormat === 'ico'
       ? {
           ...requirements,
           maxWidth: Math.min(requirements.maxWidth ?? ICO_MAX_SIZE, ICO_MAX_SIZE),
@@ -155,29 +158,33 @@ export async function transformDecoded(
       surface = canvas;
       return canvas;
     };
-    const mime = mimeOf(options.outputFormat);
+    const mime = mimeOf(outputFormat);
     // The pixel size is settled above, by the website's own rules; a file-size limit is
-    // met with quality alone. Whether the result may be used without asking is decided
-    // from what it looks like (see needsQualityConsent).
+    // met with quality first. Only when no quality can meet it are fewer pixels found,
+    // as few fewer as fit, and then the person is asked before the file is used (see
+    // needsShrinkConsent). An exact size is the website's own and never shrinks.
+    const exact = Boolean(rules.exactWidth || rules.exactHeight);
     const encoded = await compressToTarget(
       {
         ...target,
-        format: options.outputFormat,
+        format: outputFormat,
         maxBytes: rules.maxBytes,
         minBytes: rules.minBytes,
         // Each AVIF encode takes seconds, not milliseconds.
-        searchSteps: options.outputFormat === 'avif' ? 3 : undefined,
+        searchSteps: outputFormat === 'avif' ? 3 : undefined,
+        ...(exact
+          ? {}
+          : { shrink: { minWidth: rules.minWidth ?? 1, minHeight: rules.minHeight ?? 1 } }),
       },
       async (width, height, quality) =>
-        encodeCanvas(await render(width, height), options.outputFormat, quality),
+        encodeCanvas(await render(width, height), outputFormat, quality),
     );
 
     const resizedToFit = encoded.width < size.width || encoded.height < size.height;
-    const sizeLimited =
-      resizedToFit || (isLossy(options.outputFormat) && encoded.quality < QUALITY.max);
+    const sizeLimited = resizedToFit || (isLossy(outputFormat) && encoded.quality < QUALITY.max);
     // A lossless file holds exactly the pixels drawn, so those are compared; a GIF's
     // palette and lossy formats are compared as the browser decodes the file.
-    const lossless = !isLossy(options.outputFormat) && options.outputFormat !== 'gif';
+    const lossless = !isLossy(outputFormat) && outputFormat !== 'gif';
     const quality =
       lossless && !resizedToFit
         ? 100
@@ -187,7 +194,7 @@ export async function transformDecoded(
           );
 
     const changes: TransformChange[] = [];
-    if (info.format !== options.outputFormat) changes.push('converted');
+    if (info.format !== outputFormat) changes.push('converted');
     if (crop) changes.push('cropped');
     if (encoded.width !== region.width || encoded.height !== region.height) changes.push('resized');
     if (requirements.maxBytes !== undefined && info.bytes > requirements.maxBytes)
@@ -196,8 +203,9 @@ export async function transformDecoded(
       changes.push('raised-to-minimum');
     if (flatten) changes.push('background-added');
     if (info.animated) changes.push('first-frame');
+    if ((info.pages ?? 1) > 1) changes.push('first-page');
     if ((info.orientation ?? 1) !== 1) changes.push('orientation-applied');
-    const file = new File([encoded.blob], outputFilename(original.name, options.outputFormat), {
+    const file = new File([encoded.blob], outputFilename(original.name, outputFormat), {
       type: mime,
       lastModified: original.lastModified,
     });
@@ -211,7 +219,7 @@ export async function transformDecoded(
       finalWidth: encoded.width,
       finalHeight: encoded.height,
       originalFormat: info.format,
-      finalFormat: options.outputFormat,
+      finalFormat: outputFormat,
       qualityKept: quality,
       resizedToFit,
       sizeLimited,
@@ -258,30 +266,34 @@ export async function prepareImage(
 ): Promise<PrepareOutcome> {
   const decoded = await decodeImage(file, raster, progress, !statesPixelSize(requirements));
   try {
-    const decision = decide(decoded.info, requirements);
-    if (decision.action === 'PASS_THROUGH') return { kind: 'pass' };
-    if (decision.action === 'UNSAFE_TO_FIX') {
-      return {
-        kind: 'unsafe',
-        code: decision.issues.includes('unknown') ? 'damaged' : 'rules-conflict',
-      };
-    }
-    if (decision.action === 'AUTO_FIX') {
-      const result = await transformDecoded(
-        decoded,
-        file,
-        requirements,
-        transformOptions(decision),
-      );
-      return { kind: 'fixed', result };
-    }
-    return {
-      kind: 'confirm',
-      decision,
-      info: decoded.info,
-      preview: await renderPreview(decoded.bitmap, decoded.info.transparent),
-    };
+    return await prepareDecoded(decoded, file, requirements);
   } finally {
     decoded.bitmap.close();
   }
+}
+
+/** The same, for an image already decoded (or a PDF page already drawn). */
+export async function prepareDecoded(
+  decoded: DecodedImage,
+  file: File,
+  requirements: UploadRequirements,
+): Promise<PrepareOutcome> {
+  const decision = decide(decoded.info, requirements);
+  if (decision.action === 'PASS_THROUGH') return { kind: 'pass' };
+  if (decision.action === 'UNSAFE_TO_FIX') {
+    return {
+      kind: 'unsafe',
+      code: decision.issues.includes('unknown') ? 'damaged' : 'rules-conflict',
+    };
+  }
+  if (decision.action === 'AUTO_FIX') {
+    const result = await transformDecoded(decoded, file, requirements, transformOptions(decision));
+    return { kind: 'fixed', result };
+  }
+  return {
+    kind: 'confirm',
+    decision,
+    info: decoded.info,
+    preview: await renderPreview(decoded.bitmap, decoded.info.transparent),
+  };
 }

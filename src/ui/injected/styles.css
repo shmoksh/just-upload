@@ -41,29 +41,34 @@ input:focus-visible {
 }
 
 /* Note ------------------------------------------------------------------
-   A compact card in the corner: the mark, what happened, the change as two tags and,
-   at the right, the one number that matters (quality kept, or progress). */
+   Frosted glass in the corner, like the system's own notifications: the file itself (or
+   the mark), what happened in one plain line, and at the right the one number that
+   matters, the quality kept, as a ring. */
 
 .ju-toast {
   position: fixed;
   inset: auto 20px 20px auto;
-  width: min(356px, calc(100vw - 24px));
+  width: min(372px, calc(100vw - 24px));
   height: auto;
   margin: 0;
-  padding: 12px 14px 13px 12px;
+  padding: 12px 16px 12px 12px;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  column-gap: 12px;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  column-gap: 14px;
   align-items: center;
   overflow: visible;
   color: var(--ju-ink);
-  background: var(--ju-surface);
+  background: var(--ju-glass);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
   border: 0;
-  border-radius: 16px;
-  box-shadow: var(--ju-shadow-float);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 1px 0 var(--ju-glass-edge),
+    var(--ju-shadow-glass);
   transform-origin: 100% 100%;
   animation: ju-toast-in 300ms cubic-bezier(0.2, 0.9, 0.3, 1.08);
-  animation: ju-toast-in 360ms var(--ju-spring);
+  animation: ju-toast-in 420ms var(--ju-spring);
 }
 .ju-toast.is-leaving {
   pointer-events: none;
@@ -73,11 +78,11 @@ input:focus-visible {
 /* The mark: ring and arrow while preparing, a check that draws itself, or an alert. */
 .ju-mark {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 14px;
   color: var(--ju-accent);
   background: var(--ju-accent-soft);
   box-shadow: inset 0 0 0 1px var(--ju-accent-line);
@@ -87,8 +92,8 @@ input:focus-visible {
     box-shadow 280ms var(--ju-ease-out);
 }
 .ju-mark svg {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   overflow: visible;
 }
 .ju-mark svg * {
@@ -134,26 +139,38 @@ input:focus-visible {
   opacity: 1;
   animation: ju-draw 300ms 40ms var(--ju-ease-out) both;
 }
+/* Ready: a ring of green ink spreads from the mark, like a stamp coming down. */
+[data-kind='success'] .ju-mark::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 16px;
+  box-shadow: 0 0 0 2px var(--ju-accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: ju-burst 680ms 80ms var(--ju-ease-out);
+}
 [data-kind='error'] .ju-mark {
-  color: var(--ju-amber);
-  background: var(--ju-amber-soft);
-  box-shadow: inset 0 0 0 1px var(--ju-amber-line);
+  color: var(--ju-caution);
+  background: var(--ju-caution-soft);
+  box-shadow: inset 0 0 0 1px var(--ju-caution-line);
 }
 [data-kind='error'] .ju-alert {
   opacity: 1;
   stroke-width: 2.4;
 }
 
-/* When ready, the mark becomes the photo itself, with the check on its corner. */
+/* When ready, the mark becomes the file itself, pressed in place, with the check on its
+   corner. */
 .ju-photo {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 10px;
+  border-radius: 14px;
   outline: 1px solid rgb(0 0 0 / 8%);
   outline-offset: -1px;
-  animation: ju-fade-in 220ms var(--ju-ease-out) both;
+  animation: ju-press 520ms var(--ju-spring) both;
 }
 .ju-mark[data-photo] {
   background: none;
@@ -163,13 +180,13 @@ input:focus-visible {
   position: absolute;
   right: -6px;
   bottom: -6px;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   color: var(--ju-accent-text);
   background: var(--ju-accent);
   box-shadow: 0 0 0 2px var(--ju-surface);
-  animation: ju-pop 360ms var(--ju-spring) both;
+  animation: ju-pop 380ms 120ms var(--ju-spring) both;
 }
 .ju-mark[data-photo] .ju-check {
   stroke-width: 3.6;
@@ -177,74 +194,57 @@ input:focus-visible {
 
 .ju-body {
   min-width: 0;
-  padding-top: 1px;
 }
 .ju-title {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.35;
-  letter-spacing: -0.006em;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
   color: var(--ju-ink);
 }
 .ju-detail {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--ju-muted);
 }
 
-/* The change: "HEIC 3.1 MB → JPG 1.8 MB". */
+/* The change, in one plain line: "HEIC 3.1 MB → JPG 1.8 MB", the result in green. */
 .ju-receipt {
-  margin-top: 7px;
+  margin-top: 4px;
 }
 .ju-receipt-tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-}
-.ju-pixels {
-  margin: 6px 0 0;
-  font: 500 11px/1.3 var(--ju-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--ju-muted);
+  gap: 3px 7px;
+  font-size: 12.5px;
+  line-height: 1.35;
 }
 .ju-receipt-note {
-  font-size: 12.5px;
   color: var(--ju-muted);
 }
 .ju-tag {
   display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 6px;
-  font: 500 11.5px/1 var(--ju-mono);
-  font-variant-numeric: tabular-nums;
+  align-items: baseline;
+  gap: 4px;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   color: var(--ju-muted);
-  background: var(--ju-sunken);
-  box-shadow: inset 0 0 0 1px var(--ju-line);
 }
 .ju-tag b {
-  font-weight: 650;
-  letter-spacing: 0.02em;
+  font-weight: 600;
   color: var(--ju-ink-2);
 }
-.ju-tag-after {
-  color: var(--ju-accent);
-  background: var(--ju-accent-soft);
-  box-shadow: inset 0 0 0 1px var(--ju-accent-line);
-}
+.ju-tag-after,
 .ju-tag-after b {
-  color: var(--ju-accent-deep);
+  color: var(--ju-accent);
 }
 .ju-arrow {
   flex: none;
-  width: 14px;
-  height: 10px;
+  width: 13px;
+  height: 9px;
   color: var(--ju-faint);
 }
 .ju-arrow path {
@@ -254,50 +254,99 @@ input:focus-visible {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.ju-pixels {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  color: var(--ju-muted);
+}
 
-/* The number at the right: quality kept, or how far along a large image is. */
+/* At the right: the quality kept, as a ring that fills to it (grey-green when the loss would
+   show), or how far along a large file is. */
 .ju-meter {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  padding-top: 1px;
-  line-height: 1.1;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
 }
 .ju-meter:empty {
   display: none;
 }
-.ju-meter b {
-  font: 700 14px/1.35 var(--ju-font);
+.ju-meter-label {
+  font-size: 9.5px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--ju-faint);
+}
+.ju-meter > b {
+  font: 700 14px/1.2 var(--ju-font);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   color: var(--ju-accent);
 }
-.ju-meter span {
-  margin-top: 1px;
-  font-size: 10.5px;
-  letter-spacing: 0.01em;
-  color: var(--ju-faint);
+.ju-meter.is-low {
+  --ju-meter-color: var(--ju-caution);
 }
-.ju-meter.is-low b {
-  color: var(--ju-amber);
+.ju-meter.is-low > b {
+  color: var(--ju-caution);
 }
-[data-kind='processing'] .ju-meter b {
-  font-weight: 550;
+[data-kind='processing'] .ju-meter > b {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--ju-muted);
+}
+.ju-gauge {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--ju-meter-color, var(--ju-accent));
+}
+.ju-gauge svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.ju-gauge circle {
+  fill: none;
+  stroke-width: 3;
+}
+.ju-gauge-track {
+  stroke: color-mix(in srgb, currentColor 16%, transparent);
+}
+.ju-gauge-fill {
+  stroke: currentColor;
+  stroke-dasharray: 100;
+  stroke-dashoffset: calc(100 - var(--ju-value, 0));
+  animation: ju-fill-ring 760ms 160ms var(--ju-ease-out) both;
+}
+.ju-gauge b {
+  position: relative;
+  font: 700 10.5px/1 var(--ju-font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--ju-ink);
 }
 
 .ju-toast-action {
-  margin-top: 8px;
+  margin-top: 9px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0;
+  gap: 6px;
+  padding: 5px 11px 5px 12px;
   border: 0;
-  border-radius: 4px;
-  background: none;
+  border-radius: 999px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--ju-ink);
+  background: color-mix(in srgb, var(--ju-ink) 7%, transparent);
+  transition: background-color 140ms ease;
+}
+.ju-toast-action:hover {
+  background: color-mix(in srgb, var(--ju-ink) 12%, transparent);
 }
 .ju-toast-action .ju-arrow {
   width: 12px;
@@ -322,7 +371,7 @@ input:focus-visible {
   border-radius: 50%;
   color: var(--ju-muted);
   background: var(--ju-surface);
-  box-shadow: var(--ju-shadow-float);
+  box-shadow: var(--ju-shadow-glass);
   opacity: 0;
   transform: scale(0.8);
   transition:
@@ -346,13 +395,13 @@ input:focus-visible {
 /* The countdown: it is the timer, so pausing it keeps the note up. */
 .ju-timer {
   position: absolute;
-  left: 16px;
-  right: 16px;
+  left: 22px;
+  right: 22px;
   bottom: 0;
   height: 2px;
   border-radius: 2px;
   background: var(--ju-accent);
-  opacity: 0.26;
+  opacity: 0.3;
   transform: scaleX(0);
   transform-origin: left;
   pointer-events: none;
@@ -364,7 +413,7 @@ input:focus-visible {
   animation-play-state: paused;
 }
 [data-kind='error'] .ju-timer {
-  background: var(--ju-amber);
+  background: var(--ju-caution);
 }
 
 /* Dialog ---------------------------------------------------------------- */
@@ -453,8 +502,8 @@ dialog.ju-dialog::backdrop {
   max-height: 260px;
   border-radius: 8px;
   box-shadow:
-    0 0 0 1px rgb(24 52 36 / 8%),
-    0 6px 16px -6px rgb(24 52 36 / 22%);
+    0 0 0 1px rgb(15 26 20 / 8%),
+    0 6px 16px -6px rgb(15 26 20 / 22%);
 }
 .ju-preview[data-checker] {
   background: repeating-conic-gradient(var(--ju-line) 0% 25%, var(--ju-surface) 0% 50%) 50% / 14px
@@ -470,7 +519,7 @@ dialog.ju-dialog::backdrop {
   user-select: none;
   background: repeating-conic-gradient(var(--ju-line) 0% 25%, var(--ju-surface) 0% 50%) 50% / 14px
     14px;
-  box-shadow: 0 6px 16px -6px rgb(24 52 36 / 28%);
+  box-shadow: 0 6px 16px -6px rgb(15 26 20 / 28%);
 }
 .ju-crop[data-dragging] {
   cursor: grabbing;
@@ -522,11 +571,6 @@ dialog.ju-dialog::backdrop {
   min-height: 24px;
   accent-color: var(--ju-accent);
 }
-.ju-hint {
-  margin-top: 8px !important;
-  font-size: 12px !important;
-  text-align: center;
-}
 
 /* How much quality a size limit would cost, against the point where it looks the same. */
 .ju-quality {
@@ -544,7 +588,7 @@ dialog.ju-dialog::backdrop {
   margin-left: 4px;
   font: 650 14px/1 var(--ju-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--ju-amber);
+  color: var(--ju-caution);
 }
 .ju-quality-same-label {
   font: 500 11px/1 var(--ju-mono);
@@ -564,7 +608,7 @@ dialog.ju-dialog::backdrop {
   inset: 0 auto 0 0;
   width: calc(var(--ju-quality, 0) * 100%);
   border-radius: inherit;
-  background: var(--ju-amber);
+  background: var(--ju-caution);
   transform-origin: left;
   animation: ju-grow 700ms 120ms var(--ju-ease-out) both;
 }
@@ -597,7 +641,7 @@ dialog.ju-dialog::backdrop {
   height: 6px;
   margin-top: 7px;
   border-radius: 50%;
-  background: var(--ju-amber);
+  background: var(--ju-caution);
 }
 .ju-chip {
   display: inline-flex;
@@ -646,14 +690,14 @@ dialog.ju-dialog::backdrop {
   transform: scale(0.985);
 }
 .ju-button.primary {
-  color: var(--ju-accent-text);
-  background: var(--ju-accent);
+  color: var(--ju-lime-ink);
+  background: var(--ju-lime);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 16%),
-    0 1px 2px rgb(24 52 36 / 18%);
+    inset 0 0 0 1px rgb(13 42 23 / 8%),
+    0 1px 2px rgb(15 26 20 / 12%);
 }
 .ju-button.primary:hover {
-  background: var(--ju-accent-deep);
+  background: var(--ju-lime-deep);
 }
 .ju-footnote {
   margin-top: 14px !important;
@@ -732,6 +776,30 @@ dialog.ju-dialog::backdrop {
     transform: scale(0.4);
   }
 }
+@keyframes ju-press {
+  from {
+    opacity: 0;
+    transform: scale(1.22) rotate(-6deg);
+  }
+  45% {
+    opacity: 1;
+  }
+}
+@keyframes ju-burst {
+  from {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+@keyframes ju-fill-ring {
+  from {
+    stroke-dashoffset: 100;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .ju-toast,
@@ -749,8 +817,19 @@ dialog.ju-dialog::backdrop {
     stroke-dashoffset: 0;
   }
   .ju-quality-fill,
-  .ju-mark[data-photo] svg {
+  .ju-mark[data-photo] svg,
+  .ju-photo,
+  .ju-gauge-fill,
+  [data-kind='success'] .ju-mark::after {
     animation: none;
+  }
+}
+/* Solid, not frosted, for people who asked their system for less transparency. */
+@media (prefers-reduced-transparency: reduce) {
+  .ju-toast {
+    background: var(--ju-surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 @media (hover: none) {
@@ -762,8 +841,7 @@ dialog.ju-dialog::backdrop {
 @media (forced-colors: active) {
   .ju-toast,
   dialog.ju-dialog,
-  .ju-button,
-  .ju-tag {
+  .ju-button {
     border: 1px solid CanvasText;
   }
   .ju-button.primary {

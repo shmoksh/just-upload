@@ -1,6 +1,9 @@
+import { allowedOutputs, formatAllowed } from '../compatibility';
+import { detectFile, DETECT_BYTES } from '../documents/detect';
+import { renderPdfPage } from '../documents/render';
 import { LIMITS, processingTime } from '../security/limits';
 import { errorCode, fail, ProcessingError } from '../utils/errors';
-import { detectFormat, parseHeader } from './headers';
+import { parseHeader } from './headers';
 import { sanitizeRequirements } from './protocol';
 import { svgRenderSize } from './svg';
 import ImageWorker from './worker?worker';
@@ -77,9 +80,7 @@ export function warm(): void {
  * Workers cannot draw SVG, so this page renders it first, as an image (scripts inside
  * an SVG never run this way, and the extension's CSP blocks any external resource).
  */
-async function rasterizeIfSvg(file: Blob, requirements: unknown): Promise<Blob | undefined> {
-  if (detectFormat(new Uint8Array(await file.slice(0, 4096).arrayBuffer())) !== 'svg')
-    return undefined;
+async function rasterizeSvg(file: Blob, requirements: unknown): Promise<Blob> {
   if (file.size > LIMITS.maxSvgBytes) fail('too-large-to-process');
   const intrinsic = parseHeader(new Uint8Array(await file.arrayBuffer()));
   const { width, height } = svgRenderSize(intrinsic, sanitizeRequirements(requirements));
@@ -101,6 +102,27 @@ async function rasterizeIfSvg(file: Blob, requirements: unknown): Promise<Blob |
     canvas.width = 0;
     canvas.height = 0;
   }
+}
+
+interface Drawn {
+  raster?: Blob;
+  pages?: number;
+}
+
+/**
+ * What a worker needs drawn first: an SVG, and a PDF's first page when the site takes
+ * images and not PDFs. PDF.js needs a page to draw on, so both happen here.
+ */
+async function draw(job: PoolJob): Promise<Drawn> {
+  const name = job.file instanceof File ? job.file.name : '';
+  const head = new Uint8Array(await job.file.slice(0, DETECT_BYTES).arrayBuffer());
+  const format = detectFile(head, name, job.file.type);
+  if (format === 'svg') return { raster: await rasterizeSvg(job.file, job.requirements) };
+  if (format !== 'pdf') return {};
+  const rules = sanitizeRequirements(job.requirements);
+  if (formatAllowed('pdf', rules) || !allowedOutputs(rules).length) return {};
+  const { image, pages } = await renderPdfPage(job.file);
+  return { raster: image, pages };
 }
 
 /** Starts as many queued jobs as memory allows, in order. */
@@ -131,16 +153,16 @@ function start(job: Job): void {
     job.respond(response);
     drain();
   };
-  const timer = setTimeout(
-    () => finish({ ok: false, error: 'timeout' }),
-    processingTime(job.file.size),
-  );
+  // A job that keeps reporting progress is working, not stuck: each report restarts its clock.
+  const clock = () =>
+    setTimeout(() => finish({ ok: false, error: 'timeout' }), processingTime(job.file.size));
+  let timer = clock();
   job.stop = () => finish({ ok: false, error: 'cancelled' });
   running.set(job.id, job);
   void (async () => {
-    let raster: Blob | undefined;
+    let drawn: Drawn;
     try {
-      raster = await rasterizeIfSvg(job.file, job.requirements);
+      drawn = await draw(job);
     } catch (error) {
       finish({ ok: false, error: errorCode(error) });
       return;
@@ -149,8 +171,11 @@ function start(job: Job): void {
     pooled = takeWorker();
     pooled.worker.onmessage = (event: MessageEvent<unknown>) => {
       const data = event.data as { progress?: unknown } | undefined;
-      if (typeof data?.progress === 'number') job.onProgress?.(data.progress);
-      else finish(event.data, true);
+      if (typeof data?.progress === 'number') {
+        clearTimeout(timer);
+        timer = clock();
+        job.onProgress?.(data.progress);
+      } else finish(event.data, true);
     };
     pooled.worker.onerror = () => finish({ ok: false, error: 'failed' });
     const { kind, file, requirements, options, serialize } = job;
@@ -159,7 +184,8 @@ function start(job: Job): void {
       file,
       requirements,
       options,
-      raster,
+      raster: drawn.raster,
+      pages: drawn.pages,
       serialize,
     });
   })();

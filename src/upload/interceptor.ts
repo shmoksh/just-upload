@@ -1,12 +1,14 @@
 import type { Settings, TransformResult, UploadRequirements } from '../models';
 import { allowedOutputs, formatAllowed, guessFormat, mightNeedWork } from '../compatibility';
-import { needsQualityConsent, transformOptions, type Preferences } from '../decision';
+import { isImage } from '../formats';
+import { consentFor, transformOptions, type Preferences } from '../decision';
 import type { Processor } from '../images/client';
 import type { PrepareOutcome } from '../images/transform';
 import { isCompatibleByHeader } from '../images/quick-check';
 import { detectRequirements, parseAccept } from '../requirements';
 import { LIMITS } from '../security/limits';
 import { isActiveOn } from '../settings';
+import { nounFor } from '../ui/copy';
 import type { PageUi } from '../ui/injected';
 import { errorCode, fail, type ErrorCode } from '../utils/errors';
 import { logger } from '../utils/logger';
@@ -64,7 +66,7 @@ interface Inspected {
   file: File;
   result?: TransformResult;
   question?: Extract<PrepareOutcome, { kind: 'confirm' }>;
-  /** Prepared, but used only if the person agrees (see needsQualityConsent). */
+  /** Prepared, but used only if the person agrees (see consentFor). */
   candidate?: TransformResult;
 }
 
@@ -205,25 +207,29 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
     stale();
     if (compatible) return { file };
     const outcome = await deps.processor.prepare(file, requirements, signal, (fraction) =>
-      deps.ui.progress?.(session.original.length, fraction),
+      deps.ui.progress?.(session.original.length, fraction, nounFor(session.original)),
     );
     stale();
     if (outcome.kind === 'pass') return { file };
     if (outcome.kind === 'unsafe') fail(outcome.code);
     if (outcome.kind === 'fixed') {
-      return needsQualityConsent(outcome.result, preferences)
+      return consentFor(outcome.result, preferences)
         ? { file, candidate: outcome.result }
         : { file: outcome.result.file, result: outcome.result };
     }
     return { file, question: outcome };
   }
 
-  /** Shows what a prepared file keeps of the original, and uses it only if approved. */
-  async function confirmQuality(
+  /**
+   * Shows what a prepared file keeps of the original (its quality, and its pixels when it
+   * needed fewer to fit), and uses it only if approved.
+   */
+  async function confirmResult(
     session: Session,
     original: File,
     candidate: TransformResult,
     requirements: UploadRequirements,
+    preferences: Preferences,
     notice: { stop(): void },
   ): Promise<{ file: File; result?: TransformResult }> {
     notice.stop();
@@ -233,7 +239,7 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
           action: 'USER_CONFIRMATION',
           issues: [],
           outputFormat: candidate.finalFormat,
-          consents: ['quality'],
+          consents: [consentFor(candidate, preferences) ?? 'quality'],
         },
         info: {
           format: candidate.originalFormat,
@@ -244,9 +250,13 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
           animated: false,
         },
         requirements,
-        preview: candidate.file,
+        // A PDF made smaller has no picture to show; its numbers say enough.
+        preview: isImage(candidate.finalFormat) ? candidate.file : undefined,
         removeOnDecline: Boolean(session.unlocked),
         quality: candidate.qualityKept,
+        ...(candidate.resizedToFit
+          ? { fitted: { width: candidate.finalWidth, height: candidate.finalHeight } }
+          : {}),
       },
       session.controller.signal,
     );
@@ -267,7 +277,8 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
     notice: { start(): void; stop(): void },
   ): Promise<{ file: File; result?: TransformResult }> {
     const { question, candidate, file } = inspected;
-    if (candidate) return confirmQuality(session, file, candidate, requirements, notice);
+    if (candidate)
+      return confirmResult(session, file, candidate, requirements, preferences, notice);
     if (!question) return inspected;
     const { signal } = session.controller;
     notice.stop();
@@ -289,11 +300,11 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
     notice.start();
     const options = transformOptions(question.decision, answer.crop);
     const result = await deps.processor.transform(file, requirements, options, signal, (fraction) =>
-      deps.ui.progress?.(session.original.length, fraction),
+      deps.ui.progress?.(session.original.length, fraction, nounFor(session.original)),
     );
     if (!isCurrent(session)) fail('cancelled');
-    if (needsQualityConsent(result, preferences))
-      return confirmQuality(session, file, result, requirements, notice);
+    if (consentFor(result, preferences))
+      return confirmResult(session, file, result, requirements, preferences, notice);
     return { file: result.file, result };
   }
 
@@ -308,7 +319,8 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
       start() {
         clearTimeout(timer);
         timer = setTimeout(() => {
-          if (isCurrent(session)) hide = deps.ui.processing(session.original.length);
+          if (isCurrent(session))
+            hide = deps.ui.processing(session.original.length, nounFor(session.original));
         }, PROCESSING_NOTICE_MS);
       },
       stop() {
@@ -360,7 +372,7 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
           session.input.value = '';
         }
         if (!(error instanceof Declined)) {
-          deps.ui.failure(errorCode(error), true);
+          deps.ui.failure(errorCode(error), true, nounFor(session.original));
           deps.onProblem?.(errorCode(error), session.original, requirements);
         }
         return;
@@ -371,7 +383,7 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
       if (code !== 'cancelled') deps.onProblem?.(code, session.original, requirements);
       if (!QUIET_FAILURES.has(code)) {
         logger.warn('processing-failed', code);
-        deps.ui.failure(code, false);
+        deps.ui.failure(code, false, nounFor(session.original));
       }
     } finally {
       notice.stop();

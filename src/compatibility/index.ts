@@ -1,6 +1,7 @@
 import type {
   CompatibilityIssue,
-  ImageFormat,
+  FileFormat,
+  FileOutput,
   ImageInfo,
   OutputFormat,
   UploadRequirements,
@@ -9,7 +10,10 @@ import {
   FORMATS,
   formatFromExtension,
   formatFromMime,
+  isImage,
+  isSheet,
   OUTPUT_FORMATS,
+  SHEET_OUTPUTS,
   type KnownFormat,
 } from '../formats';
 
@@ -37,11 +41,16 @@ export function sameRatio(width: number, height: number, ratio: number): boolean
   return Math.abs(width - height * ratio) <= Math.max(1, ratio);
 }
 
-export function formatAllowed(format: ImageFormat, requirements: UploadRequirements): boolean {
+export function formatAllowed(
+  format: FileFormat | FileOutput,
+  requirements: UploadRequirements,
+): boolean {
   const { acceptedMimeTypes: mimeTypes, acceptedExtensions: extensions } = requirements;
   if (!mimeTypes.length && !extensions.length) return true;
   if (format === 'unknown') return false;
-  if (mimeTypes.includes('image/*') || mimeTypes.includes('*/*')) return true;
+  if (mimeTypes.includes('*/*')) return true;
+  // "image/*" takes any image, but not a PDF or a spreadsheet.
+  if (mimeTypes.includes('image/*') && isImage(format)) return true;
   // A field accepting HEIF also takes HEIC, and the other way round.
   return [format, ...(FORMATS[format].family ?? [])].some(
     (candidate: KnownFormat) =>
@@ -59,12 +68,34 @@ export function hasDimensionRules(requirements: UploadRequirements): boolean {
   return DIMENSION_FIELDS.some((field) => requirements[field] !== undefined);
 }
 
+/**
+ * What a file of this format can become on this field, best first: an accepted image or
+ * a PDF, for an image or a PDF; another accepted spreadsheet format, for a spreadsheet.
+ * Empty when the field takes nothing Just Upload can make from it.
+ */
+export function conversionTargets(
+  format: FileFormat,
+  requirements: UploadRequirements,
+): FileOutput[] {
+  if (format === 'unknown') return [];
+  if (isSheet(format))
+    return SHEET_OUTPUTS.filter(
+      (output) => output !== format && formatAllowed(output, requirements),
+    );
+  const pdf: FileOutput[] = formatAllowed('pdf', requirements) ? ['pdf'] : [];
+  // An image stays an image where it can; a PDF stays a PDF where it can.
+  return format === 'pdf'
+    ? [...pdf, ...allowedOutputs(requirements)]
+    : [...allowedOutputs(requirements), ...pdf];
+}
+
 /** A fast hint from the name and type. Real decisions use the file's signature. */
-export function guessFormat(file: Pick<File, 'name' | 'type'>): ImageFormat {
-  const byMime = formatFromMime(file.type);
-  if (byMime) return byMime;
+export function guessFormat(file: Pick<File, 'name' | 'type'>): FileFormat {
   const extension = /\.[^.]+$/.exec(file.name)?.[0] ?? '';
-  return formatFromExtension(extension) ?? 'unknown';
+  const byExtension = formatFromExtension(extension);
+  // Windows reports a CSV file as an Excel one when Excel is installed.
+  if (byExtension === 'csv') return 'csv';
+  return formatFromMime(file.type) ?? byExtension ?? 'unknown';
 }
 
 /**
@@ -75,14 +106,18 @@ export function mightNeedWork(
   file: Pick<File, 'name' | 'type' | 'size'>,
   requirements: UploadRequirements,
 ): boolean {
-  if (!file.size || !allowedOutputs(requirements).length) return false;
+  if (!file.size) return false;
   const format = guessFormat(file);
   if (format === 'unknown') return false;
-  if (!formatAllowed(format, requirements)) return true;
+  if (!formatAllowed(format, requirements))
+    return conversionTargets(format, requirements).length > 0;
+  // A spreadsheet in an accepted format is left exactly as it is.
+  if (isSheet(format)) return false;
   if (requirements.maxBytes !== undefined && file.size > requirements.maxBytes) return true;
+  if (format === 'pdf') return false;
   if (requirements.minBytes !== undefined && file.size < safeMinimum(requirements.minBytes))
     return true;
-  return hasDimensionRules(requirements);
+  return allowedOutputs(requirements).length > 0 && hasDimensionRules(requirements);
 }
 
 /** Every way this image fails the field's rules, not just the first. */

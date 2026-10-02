@@ -1,21 +1,16 @@
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { type ReactNode, useEffect, useState } from 'react';
+import { AnimatePresence, m, useInView, useReducedMotion } from 'framer-motion';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
-import { LOOKS_THE_SAME } from '../../src/decision';
-import {
-  Arrow,
-  FileTag,
-  Icon,
-  Logo,
-  MotionRoot,
-  PRODUCT_NAME,
-  Wordmark,
-} from '../../src/ui/shared';
+import { Icon, Logo, MotionRoot, PRODUCT_NAME, Seal, Wordmark } from '../../src/ui/shared';
 import { Lab } from './lab';
 import { Walkthrough } from './walkthrough';
 import '../../src/ui/pages.css';
 import './onboarding.css';
+
+// The welcome page, written as the product's home page: what it does, its top features,
+// a live demonstration, a place to try it, and what it never does with your files.
+// Every figure on it was measured with the extension itself.
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -23,311 +18,677 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 function Reveal({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
   return (
     <m.div
-      initial={{ opacity: 0, y: 18 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.7, ease: EASE, delay }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.8, ease: EASE, delay }}
     >
       {children}
     </m.div>
   );
 }
 
-function FileGlyph({ tone }: { tone: 'refused' | 'after' }) {
+/** Runs `tick` every `ms` while `active`; nothing animates off screen. */
+function useTicker(ms: number, active: boolean, count: number): number {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => setIndex((at) => (at + 1) % count), ms);
+    return () => clearInterval(timer);
+  }, [ms, active, count]);
+  return index;
+}
+
+function Check({ size = 12 }: { size?: number }) {
   return (
-    <svg className={`file-glyph ${tone}`} viewBox="0 0 28 34" fill="none" aria-hidden="true">
-      <path d="M3 1.5h15L26.5 10v21a1.5 1.5 0 0 1-1.5 1.5H3A1.5 1.5 0 0 1 1.5 31V3A1.5 1.5 0 0 1 3 1.5Z" />
-      <path d="M17.5 1.5V10h9" />
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="m3.5 8.5 3 3 6-7"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-interface Example {
-  /** The format, on the tab under the card. */
-  format: string;
-  address: string;
-  field: string;
-  from: { name: string; detail: string; size: string };
-  to: { name: string; detail: string; format: string; size: string };
-  seconds: string;
-  quality: number;
+function ArrowRight() {
+  return (
+    <svg className="arrow-right" width="18" height="10" viewBox="0 0 18 10" aria-hidden="true">
+      <path
+        d="M1 5h15M12 1l4 4-4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
-/**
- * Real results, measured with the engine on this page's "Try it": every kind of image a
- * website refuses, not only phone photos. All keep their full pixel size.
- */
-const EXAMPLES: Example[] = [
+/* ------------------------------------------------------------------------------------ */
+/* Hero: a refused file, a copy that fits, and the stamp.                               */
+
+interface Scene {
+  tab: string;
+  kind: 'photo' | 'screenshot' | 'pdf' | 'sheet';
+  site: string;
+  rule: string;
+  before: { name: string; detail: string };
+  after: { name: string; detail: string };
+  note: string;
+}
+
+/** Measured with the extension: each result keeps its full pixel size. */
+const SCENES: Scene[] = [
   {
-    format: 'WebP',
-    address: 'careers.example.com/apply',
-    field: 'Profile photo · JPG or PNG · Max 2 MB',
-    from: { name: 'vacation.webp', detail: '4032 × 3024 · saved from the web', size: '2.7 MB' },
-    to: {
-      name: 'vacation.jpg',
-      detail: '4032 × 3024 · full size kept',
-      format: 'JPG',
-      size: '1.9 MB',
-    },
-    seconds: '0.6 s',
-    quality: 97,
+    tab: 'WebP',
+    kind: 'photo',
+    site: 'careers.example.com',
+    rule: 'Profile photo · JPG or PNG · max 2 MB',
+    before: { name: 'vacation.webp', detail: 'WebP · 2.7 MB' },
+    after: { name: 'vacation.jpg', detail: 'JPG · 1.9 MB' },
+    note: '97% quality kept · full size · 0.6 s',
   },
   {
-    format: 'PNG',
-    address: 'help.example.com/new-ticket',
-    field: 'Attachment · Up to 1 MB',
-    from: { name: 'Screenshot.png', detail: '2880 × 1800 · a screenshot', size: '2.3 MB' },
-    to: {
-      name: 'Screenshot.jpg',
-      detail: '2880 × 1800 · full size kept',
-      format: 'JPG',
-      size: '781 KB',
-    },
-    seconds: '0.1 s',
-    quality: 99,
+    tab: 'PNG',
+    kind: 'screenshot',
+    site: 'help.example.com',
+    rule: 'Attachment · up to 1 MB',
+    before: { name: 'Screenshot.png', detail: 'PNG · 2.3 MB' },
+    after: { name: 'Screenshot.jpg', detail: 'JPG · 781 KB' },
+    note: '99% quality kept · full size · 0.1 s',
   },
   {
-    format: 'HEIC',
-    address: 'exams.example.gov/apply',
-    field: 'Your photo · JPG only · Max 1 MB',
-    from: { name: 'IMG_2041.HEIC', detail: '3024 × 4032 · from a phone', size: '1.6 MB' },
-    to: {
-      name: 'IMG_2041.jpg',
-      detail: '3024 × 4032 · full size kept',
-      format: 'JPG',
-      size: '942 KB',
-    },
-    seconds: '0.8 s',
-    quality: 97,
+    tab: 'PDF',
+    kind: 'pdf',
+    site: 'exams.example.gov',
+    rule: 'Certificate · PDF · max 1 MB',
+    before: { name: 'certificate.pdf', detail: 'PDF · 2 MB' },
+    after: { name: 'certificate.pdf', detail: 'PDF · 957 KB' },
+    note: '97% quality kept · text untouched',
   },
   {
-    format: 'TIFF',
-    address: 'bank.example/documents',
-    field: 'ID document · JPG only · Max 2 MB',
-    from: { name: 'scan.tif', detail: '2480 × 3508 · from a scanner', size: '26.1 MB' },
-    to: { name: 'scan.jpg', detail: '2480 × 3508 · full size kept', format: 'JPG', size: '1.9 MB' },
-    seconds: '0.4 s',
-    quality: 98,
+    tab: 'Excel',
+    kind: 'sheet',
+    site: 'crm.example.com',
+    rule: 'Import contacts · CSV files only',
+    before: { name: 'contacts.xlsx', detail: 'Excel workbook' },
+    after: { name: 'contacts.csv', detail: 'CSV file' },
+    note: 'Every value kept · codes keep their zeros',
   },
 ];
-/** How long each example stays before the next one, unless the card is pointed at. */
-const EXAMPLE_MS = 5200;
 
-/**
- * The hero's picture: a refused image, Just Upload in between, the accepted copy. It
- * cycles through a web photo, a screenshot, a phone photo and a scan; the tabs under it
- * pick one.
- */
-function ReceiptCard() {
-  const reduced = useReducedMotion();
+const SHEET_ROWS = [
+  ['Name', 'Code', 'Amount'],
+  ['Zoë', '00123', '1,234.50'],
+  ['Arjun', '04567', '99.00'],
+  ['Mei', '00981', '412.75'],
+  ['Omar', '01406', '58.20'],
+];
+
+/** What a file looks like inside its card. */
+function Art({ kind }: { kind: Scene['kind'] }) {
+  if (kind === 'photo') return <img src="/sample/sample.webp" alt="" draggable={false} />;
+  if (kind === 'screenshot') return <img src="/sample/sample.png" alt="" draggable={false} />;
+  if (kind === 'pdf')
+    return (
+      <span className="art-page">
+        <b>Certificate of Completion</b>
+        <i />
+        <i />
+        <i className="short" />
+        <i />
+        <i className="short" />
+        <span className="art-signature" />
+      </span>
+    );
+  return (
+    <span className="art-grid">
+      {SHEET_ROWS.map((row, y) =>
+        row.map((cell, x) => (
+          <span key={`${y}-${x}`} className={y === 0 ? 'head' : x > 0 ? 'num' : undefined}>
+            {cell}
+          </span>
+        )),
+      )}
+    </span>
+  );
+}
+
+function StampStage() {
+  const reduced = useReducedMotion() ?? false;
   const [index, setIndex] = useState(0);
+  const [phase, setPhase] = useState(reduced ? 3 : 0);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
-    if (reduced || paused) return;
-    const timer = setTimeout(() => setIndex((at) => (at + 1) % EXAMPLES.length), EXAMPLE_MS);
+    if (reduced) {
+      setPhase(3);
+      return;
+    }
+    setPhase(0);
+    const timers = [
+      setTimeout(() => setPhase(1), 500),
+      setTimeout(() => setPhase(2), 1600),
+      setTimeout(() => setPhase(3), 2500),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [index, reduced]);
+  useEffect(() => {
+    if (reduced || paused || phase < 3) return;
+    const timer = setTimeout(() => setIndex((at) => (at + 1) % SCENES.length), 3600);
     return () => clearTimeout(timer);
-  }, [index, paused, reduced]);
-  const example = EXAMPLES[index]!;
-  const row = (delay: number) => ({
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6, ease: EASE, delay },
-  });
+  }, [phase, paused, reduced]);
+  const scene = SCENES[index]!;
+  const done = phase >= 3;
+  const file = done ? scene.after : scene.before;
   return (
     <div
-      className="hero-receipt"
+      className="stamp-stage"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
     >
+      <AnimatePresence mode="wait" initial={false}>
+        <m.p
+          key={`rule-${index}`}
+          className="stage-says"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.3, ease: EASE }}
+        >
+          <span className="mono">{scene.site} says</span>
+          <span className="display">“{scene.rule}”</span>
+        </m.p>
+      </AnimatePresence>
       <div
-        className="receipt-card"
+        className="desk"
         role="img"
-        aria-label={`A ${example.format} file refused by a website, then accepted as a ${example.to.format} after ${PRODUCT_NAME} prepares a copy.`}
+        aria-label={`A ${scene.before.detail} file refused by a website, then accepted as ${scene.after.detail} after ${PRODUCT_NAME} prepares a copy.`}
       >
+        <span className="ghost-card back" aria-hidden="true" />
+        <span className="ghost-card mid" aria-hidden="true" />
         <AnimatePresence mode="wait" initial={false}>
-          <m.div key={index} exit={{ opacity: 0, y: -6, transition: { duration: 0.2 } }}>
-            <m.div className="receipt-site" {...row(0.15)}>
-              <span className="receipt-address mono">{example.address}</span>
-              <span className="receipt-rule">{example.field}</span>
-            </m.div>
-            <m.div className="receipt-file" {...row(0.35)}>
-              <FileGlyph tone="refused" />
-              <span className="receipt-name">
-                <b>{example.from.name}</b>
-                <span>{example.from.detail}</span>
-              </span>
-              <FileTag name={example.format} size={example.from.size} tone="refused" />
-              <span className="verdict refused">Refused</span>
-            </m.div>
-            <div className="receipt-bridge">
-              <m.span
-                className="bridge-line"
-                initial={{ scaleY: 0 }}
-                animate={{ scaleY: 1 }}
-                transition={{ duration: 0.6, ease: EASE, delay: 0.75 }}
-              />
-              <m.span className="bridge-label" {...row(0.95)}>
-                <Logo size={18} />
-                <span>
-                  <b>{PRODUCT_NAME}</b> · {example.seconds}, on this computer
-                </span>
-              </m.span>
-            </div>
-            <m.div className="receipt-file" {...row(1.3)}>
-              <FileGlyph tone="after" />
-              <span className="receipt-name">
-                <b>{example.to.name}</b>
-                <span>{example.to.detail}</span>
-              </span>
-              <FileTag name={example.to.format} size={example.to.size} tone="after" />
-              <span className="verdict accepted">Accepted</span>
-            </m.div>
-            <m.div className="receipt-quality" {...row(1.55)}>
-              <span>Quality kept</span>
-              <span className="quality-bar">
-                <m.i
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: example.quality / 100 }}
-                  transition={{ duration: 1, ease: EASE, delay: 1.7 }}
-                />
-              </span>
-              <b className="num">{example.quality}%</b>
-            </m.div>
-          </m.div>
+          <m.figure
+            key={index}
+            className="file-card"
+            data-kind={scene.kind}
+            initial={{ opacity: 0, y: 26, rotate: -7, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, rotate: -2, scale: 1 }}
+            exit={{ opacity: 0, y: -16, rotate: 3, scale: 0.96, transition: { duration: 0.28 } }}
+            transition={{ type: 'spring', stiffness: 240, damping: 24 }}
+          >
+            <span className="file-art">
+              <Art kind={scene.kind} />
+              <AnimatePresence>
+                {phase === 2 && (
+                  <m.span
+                    key="sweep"
+                    className="file-sweep"
+                    initial={{ y: '-110%' }}
+                    animate={{ y: '110%' }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.9, ease: [0.45, 0, 0.55, 1] }}
+                  />
+                )}
+              </AnimatePresence>
+            </span>
+            <figcaption>
+              <AnimatePresence mode="wait" initial={false}>
+                <m.span
+                  key={done ? 'after' : 'before'}
+                  className={done ? 'file-meta after' : 'file-meta'}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.22, ease: EASE }}
+                >
+                  <b className="mono">{file.name}</b>
+                  <span>{file.detail}</span>
+                </m.span>
+              </AnimatePresence>
+            </figcaption>
+            <AnimatePresence>
+              {phase >= 1 && !done && (
+                <m.span
+                  key="refused"
+                  className="refused-tag"
+                  initial={{ opacity: 0, scale: 0.6, rotate: 12 }}
+                  animate={{ opacity: 1, scale: 1, rotate: 6 }}
+                  exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.18 } }}
+                  transition={{ type: 'spring', stiffness: 520, damping: 20 }}
+                >
+                  ✕ Not accepted
+                </m.span>
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {done && (
+                <m.span
+                  key="seal"
+                  className="seal-wrap"
+                  initial={reduced ? false : { opacity: 0, scale: 1.9, rotate: -42 }}
+                  animate={{ opacity: 1, scale: 1, rotate: -14 }}
+                  transition={{ type: 'spring', stiffness: 560, damping: 21, mass: 0.9 }}
+                >
+                  <Seal />
+                  {!reduced && (
+                    <m.span
+                      className="seal-ink"
+                      initial={{ opacity: 0.45, scale: 0.7 }}
+                      animate={{ opacity: 0, scale: 1.6 }}
+                      transition={{ duration: 0.7, ease: 'easeOut', delay: 0.05 }}
+                    />
+                  )}
+                </m.span>
+              )}
+            </AnimatePresence>
+          </m.figure>
         </AnimatePresence>
       </div>
-      <div className="receipt-tabs" role="group" aria-label="Examples">
-        {EXAMPLES.map((item, at) => (
+      <AnimatePresence mode="wait" initial={false}>
+        <m.p
+          key={done ? `note-${index}` : `wait-${phase}`}
+          className={done ? 'stage-note done' : 'stage-note'}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.25, ease: EASE }}
+        >
+          {done ? (
+            <>
+              <Check size={13} /> {scene.note}
+            </>
+          ) : phase === 2 ? (
+            'Making a copy that fits, on this computer…'
+          ) : (
+            'The website refuses it.'
+          )}
+        </m.p>
+      </AnimatePresence>
+      <div className="stage-tabs" role="group" aria-label="Examples">
+        {SCENES.map((item, at) => (
           <button
-            key={item.format}
+            key={item.tab}
             type="button"
-            className={at === index ? 'receipt-tab active' : 'receipt-tab'}
+            className={at === index ? 'stage-tab active' : 'stage-tab'}
             aria-pressed={at === index}
             onClick={() => setIndex(at)}
           >
-            {item.format}
-            {at === index && !paused && !reduced && (
-              <m.i
-                key={index}
-                className="receipt-tab-time"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: EXAMPLE_MS / 1000, ease: 'linear' }}
-              />
-            )}
+            {item.tab}
           </button>
         ))}
-        <span className="receipt-tabs-more">and 8 more formats</span>
+        <span className="stage-more">and 12 more formats</span>
       </div>
     </div>
   );
 }
 
+/* ------------------------------------------------------------------------------------ */
+/* Top features, each with a small live picture.                                       */
+
+const ROLL = ['HEIC', 'WebP', 'AVIF', 'TIFF', 'PNG', 'SVG', 'BMP', 'PDF'];
+
+function AnyFormat() {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, { amount: 0.5 });
+  const reduced = useReducedMotion() ?? false;
+  const at = useTicker(1400, visible && !reduced, ROLL.length);
+  return (
+    <div ref={ref} className="viz viz-formats" aria-hidden="true">
+      <span className="roll">
+        <AnimatePresence mode="wait" initial={false}>
+          <m.span
+            key={ROLL[at]}
+            className="format-pill"
+            initial={{ y: 22, opacity: 0, filter: 'blur(4px)' }}
+            animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+            exit={{ y: -22, opacity: 0, filter: 'blur(4px)' }}
+            transition={{ duration: 0.38, ease: EASE }}
+          >
+            {ROLL[at]}
+          </m.span>
+        </AnimatePresence>
+      </span>
+      <ArrowRight />
+      <span className="format-pill accepted">
+        JPG <Check />
+      </span>
+    </div>
+  );
+}
+
+function FitsLimit() {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, { once: true, amount: 0.6 });
+  const grow = (delay: number) => ({
+    initial: { scaleX: 0 },
+    animate: visible ? { scaleX: 1 } : {},
+    transition: { duration: 1.1, ease: EASE, delay },
+  });
+  return (
+    <div ref={ref} className="viz viz-size" aria-hidden="true">
+      <div className="size-rows">
+        <span className="size-limit">
+          <span>Limit 2 MB</span>
+        </span>
+        <p className="size-row">
+          <span className="size-label">Your photo</span>
+          <span className="size-bar">
+            <m.i className="over" {...grow(0.1)} />
+          </span>
+          <b>8.2 MB</b>
+        </p>
+        <p className="size-row">
+          <span className="size-label">The site gets</span>
+          <span className="size-bar">
+            <m.i className="fits" {...grow(0.35)} />
+          </span>
+          <b className="ok">1.8 MB</b>
+        </p>
+      </div>
+      <p className="viz-foot">Same 6000 × 4000 pixels · looks the same</p>
+    </div>
+  );
+}
+
+function MiniFile({ kind }: { kind: 'photo' | 'pdf' | 'sheet' | 'csv' }) {
+  return (
+    <span className="mini-file" data-kind={kind}>
+      {kind === 'photo' && <img src="/sample/sample.webp" alt="" draggable={false} />}
+      {kind === 'pdf' && (
+        <>
+          <i />
+          <i />
+          <i className="short" />
+          <b>PDF</b>
+        </>
+      )}
+      {kind === 'sheet' && <span className="mini-grid" />}
+      {kind === 'csv' && (
+        <>
+          <i />
+          <i className="short" />
+          <i />
+          <b>CSV</b>
+        </>
+      )}
+    </span>
+  );
+}
+
+function Documents() {
+  const rows = [
+    ['photo', 'pdf', 'Photo to PDF'],
+    ['pdf', 'photo', 'PDF to JPG'],
+    ['sheet', 'csv', 'Excel to CSV'],
+  ] as const;
+  return (
+    <div className="viz viz-docs" aria-hidden="true">
+      {rows.map(([from, to, label], at) => (
+        <m.p
+          key={label}
+          className="doc-row"
+          initial={{ opacity: 0, x: -10 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, amount: 0.8 }}
+          transition={{ duration: 0.5, ease: EASE, delay: at * 0.12 }}
+        >
+          <MiniFile kind={from} />
+          <ArrowRight />
+          <MiniFile kind={to} />
+          <span>{label}</span>
+        </m.p>
+      ))}
+    </div>
+  );
+}
+
+const PHRASES = [
+  { before: 'File size should ', key: 'not exceed 500KB', after: '', reads: 'max 500 KB' },
+  { before: 'Image ', key: 'upto 2MB', after: '', reads: 'max 2 MB' },
+  { before: 'Photo size should be ', key: 'between 20 KB and 50 KB', after: '', reads: '20–50 KB' },
+  { before: '', key: 'JPG only', after: ', no PNG', reads: 'JPG' },
+];
+
+function ReadsRules() {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, { amount: 0.5 });
+  const reduced = useReducedMotion() ?? false;
+  const at = useTicker(2600, visible && !reduced, PHRASES.length);
+  const phrase = PHRASES[at]!;
+  return (
+    <div ref={ref} className="viz viz-rules" aria-hidden="true">
+      <AnimatePresence mode="wait" initial={false}>
+        <m.div
+          key={at}
+          className="rule-card"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.35, ease: EASE }}
+        >
+          <p className="rule-quote display">
+            “{phrase.before}
+            <span className="marked">
+              <m.i
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.6, ease: EASE, delay: 0.35 }}
+              />
+              <span>{phrase.key}</span>
+            </span>
+            {phrase.after}”
+          </p>
+          <m.p
+            className="rule-reads"
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, ease: EASE, delay: 0.8 }}
+          >
+            <span>{PRODUCT_NAME} reads</span>
+            <b>{phrase.reads}</b>
+          </m.p>
+        </m.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function AsksFirst() {
+  return (
+    <div className="viz viz-asks" aria-hidden="true">
+      <div className="mini-dialog">
+        <p className="mini-dialog-brand">
+          <Logo size={14} /> {PRODUCT_NAME}
+        </p>
+        <p className="mini-dialog-title">This site needs a square photo</p>
+        <span className="mini-crop">
+          <img src="/sample/sample.webp" alt="" draggable={false} />
+          <m.span
+            className="mini-crop-frame"
+            initial={{ x: -18 }}
+            whileInView={{ x: 18 }}
+            viewport={{ amount: 0.8 }}
+            transition={{
+              duration: 2.4,
+              ease: 'easeInOut',
+              repeat: Infinity,
+              repeatType: 'mirror',
+            }}
+          />
+        </span>
+        <span className="mini-dialog-actions">
+          <span>Use original</span>
+          <span className="primary">Use this crop</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Private() {
+  return (
+    <div className="viz viz-private" aria-hidden="true">
+      <span className="private-seal">
+        <Seal top="ON YOUR COMPUTER" bottom="NOTHING SENT TO US" />
+        <span className="private-lock">
+          <Icon name="lock" size={22} />
+        </span>
+      </span>
+      <ul className="zeros">
+        <li>
+          <b className="display">0</b> servers
+        </li>
+        <li>
+          <b className="display">0</b> accounts
+        </li>
+        <li>
+          <b className="display">0</b> tracking
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+const FEATURES: { title: string; text: string; visual: ReactNode }[] = [
+  {
+    title: 'Any format, accepted.',
+    text: 'iPhone HEIC, WebP, AVIF, TIFF scans, SVG logos and more become exactly the format the website takes.',
+    visual: <AnyFormat />,
+  },
+  {
+    title: 'Fits any size limit.',
+    text: 'Made smaller to fit, at full size whenever it can. If a photo truly needs fewer pixels, it asks first, and keeps as many as fit.',
+    visual: <FitsLimit />,
+  },
+  {
+    title: 'PDFs and spreadsheets too.',
+    text: 'A photo becomes a PDF, a PDF becomes a JPG, a big PDF gets smaller, and Excel becomes CSV, or back.',
+    visual: <Documents />,
+  },
+  {
+    title: 'Reads the rules like you do.',
+    text: '“upto 2MB”, “should not exceed 500 KB”, “between 20 and 50 KB”: it understands how websites really write them.',
+    visual: <ReadsRules />,
+  },
+  {
+    title: 'Asks before anything you’d notice.',
+    text: 'Cropping, a white background or a visible drop in quality is always your choice, never a surprise.',
+    visual: <AsksFirst />,
+  },
+  {
+    title: 'Private by design.',
+    text: 'Everything happens on your computer. No servers, no account, no tracking. Your originals are never changed.',
+    visual: <Private />,
+  },
+];
+
+/* ------------------------------------------------------------------------------------ */
+/* What it fixes: an editorial list of real results.                                    */
+
 interface Case {
-  chosen: [string, string?];
+  chosen: string;
   site: string;
-  result: [string, string?] | string;
+  result: string;
   kind: 'auto' | 'ask' | 'none';
 }
 
+/** Real results, measured with the extension. */
 const CASES: Case[] = [
   {
-    chosen: ['WebP', '2.7 MB'],
+    chosen: 'WebP photo, 2.7 MB',
     site: 'JPG or PNG, max 2 MB',
-    result: ['JPG', '1.9 MB'],
+    result: 'JPG, 1.9 MB',
     kind: 'auto',
   },
   {
-    chosen: ['PNG', '2.3 MB'],
+    chosen: 'PNG screenshot, 2.3 MB',
     site: 'Attachments up to 1 MB',
-    result: ['JPG', '781 KB'],
+    result: 'JPG, 781 KB',
     kind: 'auto',
   },
+  { chosen: 'TIFF scan, 26.1 MB', site: 'JPG only, max 2 MB', result: 'JPG, 1.9 MB', kind: 'auto' },
   {
-    chosen: ['TIFF', '26.1 MB'],
-    site: 'JPG only, max 2 MB',
-    result: ['JPG', '1.9 MB'],
-    kind: 'auto',
-  },
-  {
-    chosen: ['HEIC', '1.6 MB'],
+    chosen: 'iPhone HEIC, 1.6 MB',
     site: 'JPG only, max 1 MB',
-    result: ['JPG', '942 KB'],
+    result: 'JPG, 942 KB',
     kind: 'auto',
   },
   {
-    chosen: ['JPG', '4032 × 3024'],
+    chosen: 'JPG, 4032 × 3024',
     site: 'Images up to 1920 × 1920 pixels',
-    result: ['JPG', '1920 × 1440'],
+    result: 'JPG, 1920 × 1440',
     kind: 'auto',
   },
   {
-    chosen: ['JPG', '24 KB'],
+    chosen: 'JPG, 24 KB',
     site: 'File size: minimum 30 KB, maximum 1 MB',
-    result: ['JPG', '41 KB'],
+    result: 'JPG, 41 KB',
     kind: 'auto',
   },
-  { chosen: ['SVG'], site: 'PNG only', result: ['PNG', '1024 px'], kind: 'auto' },
-  { chosen: ['AVIF'], site: 'Please save it as a TIFF', result: ['TIFF'], kind: 'auto' },
+  { chosen: 'SVG logo', site: 'PNG only', result: 'PNG, drawn sharp', kind: 'auto' },
+  { chosen: 'Photo', site: 'Upload as a PDF', result: 'A one-page PDF', kind: 'auto' },
+  { chosen: 'Scanned PDF, 2 MB', site: 'PDF, max 1 MB', result: 'PDF, 957 KB', kind: 'auto' },
+  { chosen: 'PDF', site: 'JPG or PNG only', result: 'JPG of the page', kind: 'auto' },
+  { chosen: 'Excel workbook', site: 'CSV files only', result: 'CSV', kind: 'auto' },
   {
-    chosen: ['JPG', '3024 × 4032'],
-    site: 'Square, 600 × 600',
-    result: ['JPG', '600 × 600'],
+    chosen: '48 MP phone photo, 9.4 MB',
+    site: 'File size should not exceed 500 KB',
+    result: 'JPG, 476 KB, 2575 × 1931',
     kind: 'ask',
   },
-  { chosen: ['PNG', 'see-through'], site: 'JPG only', result: ['JPG', 'white back'], kind: 'ask' },
   {
-    chosen: ['JPG', '900 KB'],
+    chosen: 'Portrait photo',
+    site: 'Square, 600 × 600',
+    result: 'You choose the crop',
+    kind: 'ask',
+  },
+  { chosen: 'See-through PNG', site: 'JPG only', result: 'White background', kind: 'ask' },
+  {
+    chosen: 'JPG, 900 KB',
     site: 'JPG or PNG, max 2 MB',
     result: 'Left exactly as it is',
     kind: 'none',
   },
 ];
 
-const KIND_LABEL = { auto: 'Automatic', ask: 'Asks you first', none: 'Nothing to do' } as const;
+const KIND_LABEL = { auto: 'Automatic', ask: 'Asks first', none: 'Nothing to do' } as const;
 
-function Ledger() {
+function Fixes() {
   return (
-    <div className="ledger" role="table" aria-label="Examples of what Just Upload fixes">
-      <div className="ledger-head" role="row">
+    <div className="fixes" role="table" aria-label="What Just Upload fixes">
+      <div className="fix-row fix-head" role="row">
         <span role="columnheader">You choose</span>
-        <span role="columnheader">The website wants</span>
+        <span role="columnheader">The website says</span>
         <span role="columnheader">The website gets</span>
         <span role="columnheader" className="visually-hidden">
           How
         </span>
       </div>
-      {CASES.map((item, index) => (
+      {CASES.map((item, at) => (
         <m.div
-          key={item.site + index}
-          className="ledger-row"
+          key={item.chosen + at}
+          className="fix-row"
           role="row"
-          initial={{ opacity: 0, x: -10 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{ duration: 0.5, ease: EASE, delay: index * 0.05 }}
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.8 }}
+          transition={{ duration: 0.5, ease: EASE, delay: Math.min(at, 6) * 0.03 }}
         >
-          <span role="cell">
-            <FileTag name={item.chosen[0]} size={item.chosen[1]} />
+          <span role="cell" className="fix-from">
+            {item.chosen}
           </span>
-          <span role="cell" className="ledger-site">
+          <span role="cell" className="fix-site display">
             “{item.site}”
           </span>
-          <span role="cell" className="ledger-result">
-            <Arrow />
-            {typeof item.result === 'string' ? (
-              <span className="ledger-same">{item.result}</span>
-            ) : (
-              <FileTag
-                name={item.result[0]}
-                size={item.result[1]}
-                tone={item.kind === 'ask' ? 'ask' : 'after'}
-              />
-            )}
+          <span role="cell" className={`fix-to ${item.kind}`}>
+            {item.kind === 'auto' && <Check />}
+            {item.result}
           </span>
-          <span role="cell" className={`ledger-kind ${item.kind}`}>
+          <span role="cell" className={`fix-kind ${item.kind}`}>
             {KIND_LABEL[item.kind]}
           </span>
         </m.div>
@@ -336,88 +697,47 @@ function Ledger() {
   );
 }
 
-const READS = [
-  'JPG',
-  'PNG',
-  'WebP',
-  'AVIF',
-  'GIF',
-  'TIFF',
-  'BMP',
-  'ICO',
-  'HEIC',
-  'HEIF',
-  'SVG',
-  'JPEG XL',
-];
-const WRITES = ['JPG', 'PNG', 'WebP', 'AVIF', 'GIF', 'TIFF', 'BMP', 'ICO'];
+/** Claims for the top of the page: each one true, and checked against the code. */
+const TRUST = [
+  { icon: 'lock', title: 'Private by design', text: 'Your files never leave your computer' },
+  { icon: 'check', title: 'Free', text: 'No account, no sign-up' },
+  { icon: 'shield', title: 'No tracking', text: 'Not a single analytics call' },
+  { icon: 'bolt', title: 'About a second', text: 'On any website, as you upload' },
+] as const;
 
-/** Two real outcomes measured against the point where a copy looks the same. */
-function QualityRuler() {
-  const from = 80;
-  const at = (value: number) => `${((value - from) / (100 - from)) * 100}%`;
-  const rows = [
-    { value: 98, label: 'A typical phone photo, made to fit 2 MB', tone: 'ok' },
-    { value: 88, label: 'Squeezed hard for a tiny limit: asks you first', tone: 'ask' },
-  ] as const;
-  // The panel decides when it is in view: a bar that starts at zero width has no area
-  // for the browser to see.
-  return (
-    <m.div
-      className="ruler"
-      aria-hidden="true"
-      initial="hidden"
-      whileInView="shown"
-      viewport={{ once: true, amount: 0.5 }}
-    >
-      <div className="ruler-rows">
-        {rows.map((row, index) => (
-          <div className="ruler-row" key={row.value}>
-            <p className="ruler-head">
-              <b className={`num ${row.tone}`}>{row.value}%</b>
-              <span>{row.label}</span>
-            </p>
-            <div className="ruler-track">
-              <m.i
-                className={row.tone}
-                style={{ width: at(row.value) }}
-                variants={{
-                  hidden: { scaleX: 0 },
-                  shown: {
-                    scaleX: 1,
-                    transition: { duration: 1, ease: EASE, delay: 0.2 + index * 0.18 },
-                  },
-                }}
-              />
-            </div>
-          </div>
-        ))}
-        <div className="ruler-line" style={{ left: at(LOOKS_THE_SAME) }}>
-          <span className="num">{LOOKS_THE_SAME}% · looks the same</span>
-        </div>
-      </div>
-      <div className="ruler-labels num">
-        {[80, 85, 90, 95, 100].map((value) => (
-          <span key={value} style={{ left: at(value) }}>
-            {value}%
-          </span>
-        ))}
-      </div>
-    </m.div>
-  );
-}
+/** In numbers. Formats: 12 kinds of image, PDF, CSV and two Excel formats. */
+const CLAIMS = [
+  { figure: '0', text: 'files sent to us. Everything happens on your computer.' },
+  { figure: '16', text: 'file formats read: photos, scans, PDFs and spreadsheets.' },
+  { figure: '140+', text: 'ways websites word their upload rules, understood.' },
+  { figure: '97%', text: 'of the quality kept or better, or it asks you first.' },
+];
+
+const PLACES = [
+  'Job applications',
+  'Exam and government forms',
+  'Bank and identity checks',
+  'Marketplace listings',
+  'Profile photos',
+  'Support tickets',
+  'School portals',
+];
 
 function Welcome() {
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  useEffect(() => {
+    document.body.classList.add('grain');
+  }, []);
 
   return (
     <div className="welcome">
       <header className="top">
         <Wordmark size={26} />
         <nav aria-label="On this page">
+          <a href="#features">Features</a>
           <a href="#how">How it works</a>
-          <a href="#fixes">What it fixes</a>
+          <a href="#try">Try it</a>
           <a href="#privacy">Privacy</a>
         </nav>
         <a className="button quiet small" href="options.html">
@@ -429,70 +749,146 @@ function Welcome() {
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-text">
             <m.p
-              className="eyebrow"
+              className="hero-status"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: EASE }}
+              transition={{ duration: 0.6, ease: EASE }}
             >
-              <span className="status-dot on" aria-hidden="true" />
-              Installed and ready on every site
+              <span className="pulse" aria-hidden="true" />
+              Installed. Ready on every website.
             </m.p>
             <m.h1
               id="hero-title"
-              initial={{ opacity: 0, y: 14 }}
+              className="display"
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: EASE, delay: 0.05 }}
+              transition={{ duration: 0.9, ease: EASE, delay: 0.05 }}
             >
               Uploads that <em>just work.</em>
             </m.h1>
             <m.p
               className="lead"
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: EASE, delay: 0.12 }}
+              transition={{ duration: 0.9, ease: EASE, delay: 0.14 }}
             >
-              When a website refuses an image because of its format or size, {PRODUCT_NAME} quietly
-              makes a copy that fits, on this computer, before the site sees it. You keep uploading
-              exactly as you do today.
+              When a website says no to your photo, PDF or spreadsheet, {PRODUCT_NAME} quietly makes
+              a copy it accepts, right on your computer, in about a second. You keep uploading the
+              way you always do.
             </m.p>
             <m.div
               className="hero-actions"
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: EASE, delay: 0.2 }}
+              transition={{ duration: 0.9, ease: EASE, delay: 0.22 }}
             >
               <button type="button" className="button large" onClick={() => scrollTo('try')}>
-                Try it with your own image
+                Try it with your own file
               </button>
-              <button type="button" className="button quiet large" onClick={() => scrollTo('how')}>
-                See how it works
+              <button type="button" className="text-link" onClick={() => scrollTo('how')}>
+                See how it works <ArrowRight />
               </button>
             </m.div>
-            <m.p
-              className="pin-hint"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
+            <m.ul
+              className="hero-trust"
+              aria-label="Why it is safe to use"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EASE, delay: 0.32 }}
             >
-              <span className="pin-keys" aria-hidden="true">
-                <Icon name="puzzle" size={15} />
-                <Icon name="pin" size={15} />
-              </span>
-              Pin {PRODUCT_NAME} from Chrome’s puzzle-piece menu to see it in your toolbar.
-            </m.p>
+              {TRUST.map((claim) => (
+                <li key={claim.title}>
+                  <span className="trust-icon" aria-hidden="true">
+                    <Icon name={claim.icon} size={15} />
+                  </span>
+                  <span>
+                    <b>{claim.title}</b>
+                    {claim.text}
+                  </span>
+                </li>
+              ))}
+            </m.ul>
           </div>
-          <div className="hero-visual">
-            <ReceiptCard />
+          <m.div
+            className="hero-visual"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: EASE, delay: 0.1 }}
+          >
+            <StampStage />
+          </m.div>
+        </section>
+
+        <section className="claims" aria-label="Just Upload in numbers">
+          {CLAIMS.map((claim, at) => (
+            <m.p
+              key={claim.figure}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: EASE, delay: 0.45 + at * 0.07 }}
+            >
+              <b className="display">{claim.figure}</b>
+              <span>{claim.text}</span>
+            </m.p>
+          ))}
+        </section>
+
+        <section className="places" aria-label="Where it helps">
+          <p className="places-title">Made for the uploads that say no</p>
+          {/* A slow ticker: the list, then a copy of it, so the loop has no seam. */}
+          <div className="places-track">
+            {[false, true].map((copy) => (
+              <ul key={String(copy)} className="places-list" aria-hidden={copy || undefined}>
+                {PLACES.map((place) => (
+                  <li key={place} className="display">
+                    {place}
+                  </li>
+                ))}
+              </ul>
+            ))}
+          </div>
+        </section>
+
+        <section id="features" className="block" aria-labelledby="features-title">
+          <Reveal>
+            <header className="block-head" data-label="Features">
+              <h2 id="features-title" className="display">
+                Everything a picky upload needs.
+              </h2>
+              <p className="block-lead">
+                Six things {PRODUCT_NAME} does for you, without a single setting to learn.
+              </p>
+            </header>
+          </Reveal>
+          <div className="features">
+            {FEATURES.map((feature, at) => (
+              <m.article
+                key={feature.title}
+                className="feature"
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.8, ease: EASE, delay: (at % 3) * 0.08 }}
+              >
+                <div className="feature-visual">{feature.visual}</div>
+                <h3 className="display">{feature.title}</h3>
+                <p>{feature.text}</p>
+              </m.article>
+            ))}
           </div>
         </section>
 
         <section id="how" className="block" aria-labelledby="how-title">
           <Reveal>
-            <p className="kicker">How it works</p>
-            <h2 id="how-title">Four steps, about a second, nothing to do.</h2>
-            <p className="block-lead">
-              Everything happens between choosing a file and the website receiving it.
-            </p>
+            <header className="block-head" data-label="How it works">
+              <h2 id="how-title" className="display">
+                Pick a file. <em>That’s the whole job.</em>
+              </h2>
+              <p className="block-lead">
+                Everything happens between choosing a file and the website receiving it, in about a
+                second. Here it is, slowed down.
+              </p>
+            </header>
           </Reveal>
           <Reveal delay={0.1}>
             <Walkthrough />
@@ -501,12 +897,15 @@ function Welcome() {
 
         <section id="try" className="block" aria-labelledby="try-title">
           <Reveal>
-            <p className="kicker">Try it</p>
-            <h2 id="try-title">Try it with your own image.</h2>
-            <p className="block-lead">
-              Type a rule the way a website words it, then choose an image or a sample. You’ll see
-              exactly what the website would get, down to the pixels. Nothing leaves this computer.
-            </p>
+            <header className="block-head" data-label="Try it">
+              <h2 id="try-title" className="display">
+                See it for yourself.
+              </h2>
+              <p className="block-lead">
+                Type a rule the way a website words it, then choose a file or one of our samples.
+                You’ll see exactly what the website would get. Nothing leaves this computer.
+              </p>
+            </header>
           </Reveal>
           <Reveal delay={0.1}>
             <Lab />
@@ -515,70 +914,38 @@ function Welcome() {
 
         <section id="fixes" className="block" aria-labelledby="fixes-title">
           <Reveal>
-            <p className="kicker">What it fixes</p>
-            <h2 id="fixes-title">The reasons websites say no.</h2>
-            <p className="block-lead">
-              Safe changes happen on their own. Anything you would notice is a question first, and
-              your photo keeps its full size unless the website asks for other dimensions.
-            </p>
+            <header className="block-head" data-label="What it fixes">
+              <h2 id="fixes-title" className="display">
+                The reasons websites say no, <em>fixed.</em>
+              </h2>
+              <p className="block-lead">
+                Real results, measured on this computer. Your photo keeps its full size unless the
+                website asks for other dimensions, or you agree to fewer pixels to fit a limit.
+              </p>
+            </header>
           </Reveal>
           <Reveal delay={0.05}>
-            <Ledger />
+            <Fixes />
           </Reveal>
+        </section>
+
+        <section id="privacy" className="block privacy" aria-labelledby="privacy-title">
           <Reveal>
-            <div className="formats">
-              <div>
-                <span className="formats-label">Reads</span>
-                <span className="formats-list">
-                  {READS.map((name) => (
-                    <FileTag key={name} name={name} />
-                  ))}
+            <div className="privacy-inner">
+              <span className="privacy-seal" aria-hidden="true">
+                <Seal top="PRIVATE" bottom="ON THIS COMPUTER" />
+                <span className="private-lock">
+                  <Icon name="lock" size={24} />
                 </span>
-              </div>
-              <div>
-                <span className="formats-label">Writes</span>
-                <span className="formats-list">
-                  {WRITES.map((name) => (
-                    <FileTag key={name} name={name} tone="after" />
-                  ))}
-                </span>
-              </div>
-              <p className="formats-note">
-                Files up to 5 GB. Huge scans and panoramas are resized only when the website states
-                a pixel size.
+              </span>
+              <h2 id="privacy-title" className="display">
+                Your files never leave this computer.
+              </h2>
+              <p className="block-lead">
+                {PRODUCT_NAME} has no servers. Your photos, PDFs and spreadsheets are prepared
+                inside your browser and go only to the website you chose, exactly as they would
+                without it.
               </p>
-            </div>
-          </Reveal>
-        </section>
-
-        <section className="block split" aria-labelledby="quality-title">
-          <Reveal>
-            <p className="kicker">Quality</p>
-            <h2 id="quality-title">You always know what you kept.</h2>
-            <p className="block-lead">
-              Every fix is measured against your photo, the way your eye compares them, and the note
-              tells you the result. Below {LOOKS_THE_SAME}%, where a difference starts to show,{' '}
-              {PRODUCT_NAME} asks before uploading.
-            </p>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <QualityRuler />
-          </Reveal>
-        </section>
-
-        <section id="privacy" className="block" aria-labelledby="privacy-title">
-          <Reveal>
-            <div className="privacy-panel">
-              <div className="privacy-icon" aria-hidden="true">
-                <Icon name="lock" size={22} />
-              </div>
-              <div>
-                <h2 id="privacy-title">Your photos never leave this computer.</h2>
-                <p>
-                  {PRODUCT_NAME} has no servers. Images are prepared inside your browser and go only
-                  to the website you chose, exactly as they would without it.
-                </p>
-              </div>
               <ul className="privacy-facts">
                 <li>
                   <b>No account</b>
@@ -597,6 +964,29 @@ function Welcome() {
                   <span>It always works on a copy.</span>
                 </li>
               </ul>
+            </div>
+          </Reveal>
+        </section>
+
+        <section className="closing" aria-labelledby="closing-title">
+          <Reveal>
+            <h2 id="closing-title" className="display">
+              That’s it. <em>Keep uploading</em> the way you always do.
+            </h2>
+            <p className="pin-hint">
+              <span className="pin-keys" aria-hidden="true">
+                <Icon name="puzzle" size={15} />
+                <Icon name="pin" size={15} />
+              </span>
+              Pin {PRODUCT_NAME} from Chrome’s puzzle-piece menu to see it in your toolbar.
+            </p>
+            <div className="closing-actions">
+              <button type="button" className="button large" onClick={() => scrollTo('try')}>
+                Try it with your own file
+              </button>
+              <a className="text-link" href="options.html">
+                Open settings <ArrowRight />
+              </a>
             </div>
           </Reveal>
         </section>

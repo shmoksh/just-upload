@@ -255,6 +255,54 @@ test.describe('automatic fixes', () => {
 });
 
 test.describe('changes that need a person to decide', () => {
+  test('a photo no quality can fit at full size asks first, then keeps as many pixels as fit', async ({
+    site,
+  }) => {
+    test.setTimeout(90_000);
+    const photo = await makeImage(site, 'IMG_5000.jpg', {
+      width: 6000,
+      height: 4000,
+      type: 'image/jpeg',
+      quality: 0.95,
+      detail: 'photo',
+    });
+    expect(photo.buffer.length).toBeGreaterThan(5_000_000);
+    await site.setInputFiles('#small', photo);
+    // "Max 500 KB" and nothing about pixels: fewer pixels only with the person's OK.
+    await expect(dialog(site)).toContainText('This image can’t fit 500 KB at full size');
+    await expect(dialog(site)).toContainText('6000 × 4000 →');
+    await dialog(site).getByRole('button', { name: 'Make it smaller' }).click();
+    const receipt = await received(site, 'small');
+    expect(receipt.files[0]).toMatchObject({ name: 'IMG_5000.jpg', type: 'image/jpeg' });
+    expect(receipt.files[0]!.size).toBeLessThanOrEqual(500_000);
+    // Fewer pixels, in the same shape. (That they are no fewer than the limit needs is
+    // measured in the unit tests, against a known encoder.)
+    const image = await selectedImage(site, '#small');
+    expect(image.width).toBeLessThan(6000);
+    expect(image.width).toBeGreaterThan(600);
+    expect(image.width / image.height).toBeCloseTo(1.5, 2);
+    await expect(toast(site)).toContainText('6000 × 4000');
+  });
+
+  test('declining fewer pixels gives the site the original photo', async ({ site }) => {
+    test.setTimeout(90_000);
+    const photo = await makeImage(site, 'IMG_5001.jpg', {
+      width: 6000,
+      height: 4000,
+      type: 'image/jpeg',
+      quality: 0.95,
+      detail: 'photo',
+    });
+    await site.setInputFiles('#small', photo);
+    await dialog(site).locator('.ju-actions').getByRole('button', { name: 'Use original' }).click();
+    const receipt = await received(site, 'small');
+    expect(receipt.files[0]).toEqual({
+      name: 'IMG_5001.jpg',
+      type: 'image/jpeg',
+      size: photo.buffer.length,
+    });
+  });
+
   test('acceptance 4: a portrait photo on a square 600 × 600 field asks for a crop first', async ({
     site,
   }) => {

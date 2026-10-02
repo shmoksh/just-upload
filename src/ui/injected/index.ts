@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import type { TransformResult } from '../../models';
 import type { ErrorCode } from '../../utils/errors';
+import { isImage } from '../../formats';
 import { failureCopy, processingCopy, successCopy } from '../copy';
 import { confirmChange, type ConfirmAnswer, type ConfirmRequest } from './dialog';
 import { showToast, updateProcessingToast } from './toast';
@@ -9,11 +10,12 @@ export type { ConfirmAnswer, ConfirmRequest };
 
 /** Everything the upload interceptor can show. Swappable in tests. */
 export interface PageUi {
-  processing(count: number): () => void;
+  /** `noun` names the files: "image", "PDF" or "file". */
+  processing(count: number, noun?: string): () => void;
   /** How much of a large image has been read, shown in the "Preparing…" notice. */
-  progress?(count: number, fraction: number): void;
+  progress?(count: number, fraction: number, noun?: string): void;
   success(results: TransformResult[]): void;
-  failure(code: ErrorCode, removed: boolean): void;
+  failure(code: ErrorCode, removed: boolean, noun?: string): void;
   confirm(request: ConfirmRequest, signal: AbortSignal): Promise<ConfirmAnswer | null>;
 }
 
@@ -27,27 +29,30 @@ function quietly<T>(show: () => T, fallback: T): T {
 }
 
 export const pageUi: PageUi = {
-  processing: (count) =>
+  processing: (count, noun) =>
     quietly(
-      () => showToast('processing', processingCopy(count)),
+      () => showToast('processing', processingCopy(count, undefined, noun)),
       () => {},
     ),
-  progress: (count, fraction) =>
-    quietly(() => updateProcessingToast(processingCopy(count).title, fraction), undefined),
+  progress: (count, fraction, noun) =>
+    quietly(
+      () => updateProcessingToast(processingCopy(count, undefined, noun).title, fraction),
+      undefined,
+    ),
   success: (results) =>
     quietly(() => {
       const [first] = results;
-      const photo = first && {
-        file: first.file,
-        width: first.finalWidth,
-        height: first.finalHeight,
-      };
+      // Only an image is shown as a picture; a PDF or spreadsheet keeps the plain check.
+      const photo =
+        first && isImage(first.finalFormat)
+          ? { file: first.file, width: first.finalWidth, height: first.finalHeight }
+          : undefined;
       void showToast('success', successCopy(results), undefined, photo);
     }, undefined),
-  failure: (code, removed) =>
+  failure: (code, removed, noun) =>
     quietly(
       () =>
-        void showToast('error', failureCopy(code, removed), {
+        void showToast('error', failureCopy(code, removed, noun), {
           label: 'Report a problem',
           run: () =>
             void browser.runtime

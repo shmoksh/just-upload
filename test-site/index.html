@@ -149,7 +149,7 @@
         <section>
           <span class="tag">Extra</span>
           <h2>Documents</h2>
-          <p>PDF only. Not an image field, so it is left alone.</p>
+          <p>PDF only. A PDF that fits is left alone.</p>
           <label for="pdf">Choose file</label>
           <input id="pdf" type="file" accept="application/pdf" />
         </section>
@@ -192,6 +192,45 @@
             accept=".jpg,.jpeg,.png"
             aria-describedby="document-help"
           />
+        </section>
+      </div>
+
+      <h2 class="group">Documents and spreadsheets</h2>
+      <div class="grid">
+        <section>
+          <span class="tag">PDF</span>
+          <h2>Certificate</h2>
+          <p id="certificate-help">Upload your certificate as a PDF, max 300 KB</p>
+          <label for="certificate">Choose file</label>
+          <input id="certificate" type="file" accept=".pdf" aria-describedby="certificate-help" />
+        </section>
+        <section>
+          <span class="tag">PDF</span>
+          <h2>Marksheet</h2>
+          <p id="marksheet-help">PDF only, max 100 KB</p>
+          <label for="marksheet">Choose file</label>
+          <input id="marksheet" type="file" accept=".pdf" aria-describedby="marksheet-help" />
+        </section>
+        <section>
+          <span class="tag">PDF</span>
+          <h2>Scan as an image</h2>
+          <p id="scan-help">JPG or PNG · Maximum 1 MB</p>
+          <label for="scan">Choose file</label>
+          <input id="scan" type="file" accept="image/jpeg,image/png" aria-describedby="scan-help" />
+        </section>
+        <section>
+          <span class="tag">Sheet</span>
+          <h2>Import contacts</h2>
+          <p id="csv-help">CSV files only</p>
+          <label for="csv">Choose file</label>
+          <input id="csv" type="file" accept=".csv" aria-describedby="csv-help" />
+        </section>
+        <section>
+          <span class="tag">Sheet</span>
+          <h2>Upload a workbook</h2>
+          <p id="xlsx-help">Excel workbook (.xlsx) only</p>
+          <label for="xlsx">Choose file</label>
+          <input id="xlsx" type="file" accept=".xlsx" aria-describedby="xlsx-help" />
         </section>
       </div>
 

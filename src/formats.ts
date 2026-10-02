@@ -1,6 +1,6 @@
-import type { ImageFormat, OutputFormat } from './models';
+import type { FileFormat, FileOutput, OutputFormat, SheetFormat } from './models';
 
-export type KnownFormat = Exclude<ImageFormat, 'unknown'>;
+export type KnownFormat = Exclude<FileFormat, 'unknown'>;
 
 export interface FormatSpec {
   /** How people see it written: "JPG", "HEIC". */
@@ -11,8 +11,10 @@ export interface FormatSpec {
   extensions: readonly string[];
   /** Other formats a field accepting this one also accepts. */
   family?: readonly KnownFormat[];
-  /** For outputs: whether it can keep transparency, and whether it trades quality for size. */
+  /** For image outputs: whether it can keep transparency, and whether it trades quality for size. */
   output?: { alpha: boolean; lossy: boolean };
+  /** Not an image: a PDF document, or a spreadsheet. */
+  kind?: 'document' | 'sheet';
 }
 
 /**
@@ -84,9 +86,41 @@ export const FORMATS: Readonly<Record<KnownFormat, FormatSpec>> = {
   },
   svg: { label: 'SVG', mimeTypes: ['image/svg+xml'], extensions: ['.svg'] },
   jxl: { label: 'JPEG XL', mimeTypes: ['image/jxl'], extensions: ['.jxl'] },
+  pdf: {
+    label: 'PDF',
+    mimeTypes: ['application/pdf', 'application/x-pdf', 'application/acrobat'],
+    extensions: ['.pdf'],
+    kind: 'document',
+  },
+  csv: {
+    label: 'CSV',
+    mimeTypes: ['text/csv', 'application/csv', 'text/comma-separated-values', 'text/x-csv'],
+    extensions: ['.csv'],
+    kind: 'sheet',
+  },
+  xlsx: {
+    label: 'XLSX',
+    mimeTypes: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    extensions: ['.xlsx'],
+    kind: 'sheet',
+  },
+  xls: {
+    label: 'XLS',
+    mimeTypes: [
+      'application/vnd.ms-excel',
+      'application/msexcel',
+      'application/x-msexcel',
+      'application/x-excel',
+    ],
+    extensions: ['.xls'],
+    kind: 'sheet',
+  },
 };
 
 export const KNOWN_FORMATS = Object.keys(FORMATS) as KnownFormat[];
+
+/** Spreadsheet outputs, in order of preference. XLS (Excel 97–2003) is read-only. */
+export const SHEET_OUTPUTS: readonly ('xlsx' | 'csv')[] = ['xlsx', 'csv'];
 
 /** Preference order when a site leaves the choice to us. */
 export const OUTPUT_FORMATS: readonly OutputFormat[] = [
@@ -125,8 +159,18 @@ export function mimeOf(format: KnownFormat): string {
   return FORMATS[format].mimeTypes[0]!;
 }
 
-export function isOutputFormat(format: ImageFormat): format is OutputFormat {
+/** Image outputs only: what the image pipeline can write. */
+export function isOutputFormat(format: FileFormat | FileOutput): format is OutputFormat {
   return format !== 'unknown' && Boolean(FORMATS[format].output);
+}
+
+export function isSheet(format: FileFormat | FileOutput): format is SheetFormat {
+  return format !== 'unknown' && FORMATS[format].kind === 'sheet';
+}
+
+/** An image format (read or written), as opposed to a document or spreadsheet. */
+export function isImage(format: FileFormat | FileOutput): boolean {
+  return format !== 'unknown' && !FORMATS[format].kind;
 }
 
 export function keepsTransparency(format: OutputFormat): boolean {

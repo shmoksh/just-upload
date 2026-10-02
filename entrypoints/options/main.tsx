@@ -12,7 +12,7 @@ import {
   problemReport,
   type ReportEnvironment,
 } from '../../src/ui/copy';
-import { Icon, MotionRoot, PRODUCT_NAME, Switch, Wordmark } from '../../src/ui/shared';
+import { Icon, MotionRoot, PRODUCT_NAME, Seal, Switch, Wordmark } from '../../src/ui/shared';
 import { useProblems, useSettings, useStats } from '../../src/ui/use-settings';
 import { formatBytes } from '../../src/utils/files';
 import '../../src/ui/pages.css';
@@ -70,7 +70,9 @@ function Section({
   return (
     <section className="section" aria-labelledby={id}>
       <div className="section-head">
-        <h2 id={id}>{title}</h2>
+        <h2 id={id} className="display">
+          {title}
+        </h2>
         {description && <p>{description}</p>}
       </div>
       <div className="section-body">
@@ -134,7 +136,7 @@ function Problems() {
     <Section
       id="problems"
       title="Problems"
-      description="When an image can’t be prepared, a short note is kept here, on this computer."
+      description="When a file can’t be prepared, a short note is kept here, on this computer."
       note="Notes hold no images, file names or website addresses, and nothing is sent anywhere. To tell us about a problem, copy the report and paste it into your message."
     >
       <div className="panel">
@@ -221,21 +223,42 @@ function Options() {
     if (ready && location.hash === '#problems')
       document.getElementById('problems')?.scrollIntoView({ block: 'start' });
   }, [ready]);
+  useEffect(() => {
+    document.body.classList.add('grain');
+  }, []);
 
   const version = browser.runtime.getManifest().version;
+  const paused = settings.disabledSites.length;
+  const state = !settings.enabled ? 'off' : paused ? 'some' : 'on';
+  const status = {
+    on: 'On for every website',
+    some: `On · paused on ${paused} ${paused === 1 ? 'site' : 'sites'}`,
+    off: 'Off · uploads stay untouched',
+  }[state];
 
   return (
     <div className="settings-page">
       <header className="topbar">
         <Wordmark size={24} />
-        <span className="tag version">
-          <b>v{version}</b>
-        </span>
+        <div className="topbar-links">
+          <a href="onboarding.html">How it works</a>
+          <span className="tag version">
+            <b>v{version}</b>
+          </span>
+        </div>
       </header>
 
       <div className="intro">
-        <h1>Settings</h1>
-        <p>Everything works without changing anything here.</p>
+        <div className="intro-text">
+          <h1 className="display">Settings</h1>
+          <p>Everything works without changing anything here.</p>
+        </div>
+        {ready && (
+          <p className="intro-status" role="status">
+            <span className={`status-dot ${state === 'off' ? '' : 'on'}`} aria-hidden="true" />
+            {status}
+          </p>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}
@@ -256,7 +279,7 @@ function Options() {
               disabled={!ready}
               onChange={toggle('enabled')}
               title="Automatic fixes"
-              detail="Prepare an image when a site can’t take it as it is."
+              detail="Prepare a file when a site can’t take it as it is."
             />
             <Switch
               checked={settings.showNotifications}
@@ -270,7 +293,7 @@ function Options() {
               disabled={!ready}
               onChange={toggle('askBeforeQualityChanges')}
               title="Ask before visible quality loss"
-              detail={`Check with you when a prepared image would keep less than ${LOOKS_THE_SAME}% of your photo’s quality.`}
+              detail={`Check with you when a prepared file would keep less than ${LOOKS_THE_SAME}% of the original’s quality.`}
             />
           </div>
         </Section>
@@ -325,7 +348,7 @@ function Options() {
           <div className="panel prose">
             <p>
               {PRODUCT_NAME} has to be ready the moment you choose a file, on any site. It only
-              looks at an upload field and the words next to it, and only after you pick an image.
+              looks at an upload field and the words next to it, and only after you pick a file.
             </p>
             <div>
               <button
@@ -344,14 +367,14 @@ function Options() {
 
         <Section
           id="numbers"
-          title="Images fixed"
+          title="Files fixed"
           description="Counts only, kept on this computer. No sites or file names."
         >
           <div className="panel figures">
             <div className="figure-main">
               <Figure value={stats.total} />
               <span className="figure-label">
-                {stats.total === 1 ? 'image fixed' : 'images fixed'}
+                {stats.total === 1 ? 'file fixed' : 'files fixed'}
               </span>
             </div>
             <div className="figure-side">
@@ -381,12 +404,15 @@ function Options() {
 
         <Problems />
 
-        <Section id="privacy" title="Privacy" description="What happens to your images.">
-          <div className="panel prose privacy">
-            <p className="privacy-lead">
-              <Icon name="lock" size={18} />
-              Your images never leave this computer.
-            </p>
+        <Section id="privacy" title="Privacy" description="What happens to your files.">
+          <div className="panel privacy">
+            <span className="privacy-seal" aria-hidden="true">
+              <Seal top="PRIVATE" bottom="ON THIS COMPUTER" />
+              <span className="privacy-lock">
+                <Icon name="lock" size={18} />
+              </span>
+            </span>
+            <p className="privacy-lead display">Your files never leave this computer.</p>
             <ul className="facts">
               <li>Prepared inside your browser, then passed only to the site you chose.</li>
               <li>No account, no servers, no analytics, no file history.</li>

@@ -43,16 +43,18 @@ function rulesOnly(requirements: UploadRequirements): UploadRequirements {
 
 /**
  * Waits for one job's answer, giving up when the selection is abandoned or the job runs
- * far past its own limit.
+ * far past its own limit. A job that keeps reporting progress is working, not stuck: each
+ * report restarts its clock, so a slow computer can still finish a huge image.
  */
 function awaitAnswer<T>(
   file: Blob,
   signal: AbortSignal,
   cancel: () => void,
-  answer: Promise<JobResponse<T> | undefined>,
+  run: (stillWorking: () => void) => Promise<JobResponse<T> | undefined>,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const settle = (action: () => void) => {
       if (settled) return;
       settled = true;
@@ -64,15 +66,21 @@ function awaitAnswer<T>(
       cancel();
       settle(() => reject(new ProcessingError('cancelled')));
     };
-    const timer = setTimeout(
-      () => {
-        cancel();
-        settle(() => reject(new ProcessingError('timeout')));
-      },
-      processingTime(file.size) + 10_000,
-    );
+    const restart = () => {
+      clearTimeout(timer);
+      timer = setTimeout(
+        () => {
+          cancel();
+          settle(() => reject(new ProcessingError('timeout')));
+        },
+        processingTime(file.size) + 10_000,
+      );
+    };
+    restart();
     signal.addEventListener('abort', onAbort, { once: true });
-    answer.then(
+    run(() => {
+      if (!settled) restart();
+    }).then(
       (response) =>
         settle(() =>
           response?.ok
@@ -98,7 +106,11 @@ function viaFrame<T>(
     file,
     signal,
     () => frame.cancel(id),
-    frame.run({ kind, id, file, ...extra }, progress) as Promise<JobResponse<T> | undefined>,
+    (stillWorking) =>
+      frame.run({ kind, id, file, ...extra }, (fraction) => {
+        stillWorking();
+        progress?.(fraction);
+      }) as Promise<JobResponse<T> | undefined>,
   );
 }
 
@@ -120,13 +132,14 @@ async function viaMessages<T>(
       void browser.runtime
         .sendMessage({ target: 'background', kind: 'cancel', id })
         .catch(() => {}),
-    browser.runtime.sendMessage({
-      target: 'background',
-      kind,
-      id,
-      file: serialized,
-      ...extra,
-    }) as Promise<JobResponse<T> | undefined>,
+    () =>
+      browser.runtime.sendMessage({
+        target: 'background',
+        kind,
+        id,
+        file: serialized,
+        ...extra,
+      }) as Promise<JobResponse<T> | undefined>,
   );
 }
 

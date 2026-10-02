@@ -1,6 +1,6 @@
-import type { CropRect, OutputFormat, UploadRequirements } from '../models';
+import type { CropRect, FileOutput, UploadRequirements } from '../models';
 import { guessFormat, sameRatio } from '../compatibility';
-import { FORMATS } from '../formats';
+import { FORMATS, isOutputFormat } from '../formats';
 import { targetRatio } from '../decision';
 import { assertDimensions } from '../security/limits';
 import { fail } from '../utils/errors';
@@ -9,9 +9,9 @@ import { fail } from '../utils/errors';
  * "IMG_9283.HEIC" becomes "IMG_9283.jpg". A file that keeps its format keeps its
  * name exactly, including the extension's case.
  */
-export function outputFilename(name: string, format: OutputFormat): string {
+export function outputFilename(name: string, format: FileOutput): string {
   if (guessFormat({ name, type: '' }) === format) return name;
-  const base = name.replace(/\.[^.]*$/, '').trim() || 'image';
+  const base = name.replace(/\.[^.]*$/, '').trim() || (isOutputFormat(format) ? 'image' : 'file');
   return `${base}${FORMATS[format].extensions[0]}`;
 }
 

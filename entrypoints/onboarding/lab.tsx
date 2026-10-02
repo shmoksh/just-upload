@@ -2,15 +2,22 @@ import { AnimatePresence, m } from 'framer-motion';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 import {
+  consentFor,
   DEFAULT_PREFERENCES,
   defaultCrop,
-  needsQualityConsent,
   targetRatio,
   transformOptions,
 } from '../../src/decision';
 import { extensionProcessor } from '../../src/images/client';
 import { parseHeader } from '../../src/images/headers';
-import type { Decision, ImageFormat, TransformResult, UploadRequirements } from '../../src/models';
+import type {
+  Decision,
+  FileFormat,
+  FileOutput,
+  ImageFormat,
+  TransformResult,
+  UploadRequirements,
+} from '../../src/models';
 import { parseText } from '../../src/requirements/text';
 import { dialogCopy, formatLabel, rulesSummary } from '../../src/ui/copy';
 import { FileTag, Icon } from '../../src/ui/shared';
@@ -102,7 +109,7 @@ function failure(error: unknown): string {
   if (code === 'damaged' || code === 'unsupported-format')
     return 'This file couldn’t be read as an image, so the website would get it unchanged.';
   if (code === 'target-unreachable')
-    return 'At its full size, it can’t get under that limit. Just Upload never changes the pixel size unless the website asks, so the website would get your original.';
+    return 'It can’t get under that limit, even with fewer pixels, so the website would get your original.';
   return 'This one couldn’t be prepared, so the website would get your original.';
 }
 
@@ -148,6 +155,36 @@ export function Lab() {
         ms: Math.round(performance.now() - started),
       });
     };
+    // A prepared file that needed fewer pixels, or lost visible quality, is shown with
+    // the question a website would ask, and used only if the person agrees.
+    const review = (result: TransformResult) => {
+      if (current.signal.aborted) return;
+      const consent = consentFor(result, DEFAULT_PREFERENCES);
+      if (!consent) return finish(result);
+      const copy = dialogCopy(
+        { action: 'USER_CONFIRMATION', issues: [], consents: [consent] },
+        rules,
+        false,
+        result.qualityKept,
+        {
+          format: photo.format,
+          width: result.originalWidth,
+          height: result.originalHeight,
+          ...(result.resizedToFit
+            ? { fitted: { width: result.finalWidth, height: result.finalHeight } }
+            : {}),
+        },
+      );
+      setState({
+        kind: 'ask',
+        title: copy.title,
+        body: copy.body,
+        confirm: copy.confirm,
+        candidate: result,
+        preview: URL.createObjectURL(result.file),
+        run: () => finish(result),
+      });
+    };
     const apply = async (decision: Decision) => {
       const ratio = targetRatio(rules);
       const crop =
@@ -156,7 +193,7 @@ export function Lab() {
           : undefined;
       setState({ kind: 'working' });
       try {
-        finish(
+        review(
           await extensionProcessor.transform(
             photo.file,
             rules,
@@ -185,25 +222,7 @@ export function Lab() {
           run: () => void apply(outcome.decision),
         });
       }
-      const { result } = outcome;
-      if (needsQualityConsent(result, DEFAULT_PREFERENCES)) {
-        const copy = dialogCopy(
-          { action: 'USER_CONFIRMATION', issues: [], consents: ['quality'] },
-          rules,
-          false,
-          result.qualityKept,
-        );
-        return setState({
-          kind: 'ask',
-          title: copy.title,
-          body: copy.body,
-          confirm: copy.confirm,
-          candidate: result,
-          preview: URL.createObjectURL(result.file),
-          run: () => finish(result),
-        });
-      }
-      finish(result);
+      review(outcome.result);
     } catch (error) {
       if (!current.signal.aborted) setState({ kind: 'failed', message: failure(error) });
     }
@@ -358,7 +377,11 @@ export function Lab() {
               <span className="pixels-after">
                 <span className="num">{pixels(result.finalWidth, result.finalHeight)}</span>
                 <span className={sameSize ? 'badge ok' : 'badge'}>
-                  {sameSize ? 'Full size kept' : 'As the website asks'}
+                  {sameSize
+                    ? 'Full size kept'
+                    : result.resizedToFit
+                      ? 'Fewer, to fit the limit'
+                      : 'As the website asks'}
                 </span>
               </span>
             ) : untouched && original ? (
@@ -458,7 +481,7 @@ function Thumb({
   pending,
 }: {
   url?: string;
-  format?: ImageFormat;
+  format?: FileFormat | FileOutput;
   busy?: boolean;
   pending?: boolean;
 }) {

@@ -281,7 +281,22 @@ function Stage({ step }: { step: number }) {
                 </span>
               </span>
               <span className="mini-meter">
-                <b>97%</b>
+                <span className="mini-gauge">
+                  <svg viewBox="0 0 40 40">
+                    <circle className="track" cx="20" cy="20" r="17" />
+                    <m.circle
+                      className="fill"
+                      cx="20"
+                      cy="20"
+                      r="17"
+                      pathLength={100}
+                      initial={{ strokeDashoffset: 100 }}
+                      animate={{ strokeDashoffset: 3 }}
+                      transition={{ duration: 0.8, ease: EASE, delay: 0.7 }}
+                    />
+                  </svg>
+                  <b>97%</b>
+                </span>
                 <span>quality kept</span>
               </span>
             </m.div>

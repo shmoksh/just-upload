@@ -7,6 +7,11 @@ const heifDecoder = fileURLToPath(
   new URL('./node_modules/libheif-js/libheif-wasm/libheif-bundle.mjs', import.meta.url),
 );
 
+// PDF.js (Apache-2.0) runs its parser in a worker of its own, loaded from the package.
+const pdfWorker = fileURLToPath(
+  new URL('./node_modules/pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url),
+);
+
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   imports: false,
@@ -14,7 +19,7 @@ export default defineConfig({
   manifest: {
     name: 'Just Upload',
     description:
-      'Makes image uploads just work. Converts any image format and fits size limits on your device when a website needs it.',
+      'Fixes files websites refuse: images, PDFs, CSV and Excel. Converts and fits size limits, right on your device.',
     minimum_chrome_version: '116',
     permissions: ['storage', 'offscreen', 'activeTab'],
     icons: { 16: '/icons/16.png', 32: '/icons/32.png', 48: '/icons/48.png', 128: '/icons/128.png' },
@@ -42,6 +47,7 @@ export default defineConfig({
   hooks: {
     'build:publicAssets': (_wxt, files) => {
       files.push({ absoluteSrc: heifDecoder, relativeDest: 'vendor/libheif.mjs' });
+      files.push({ absoluteSrc: pdfWorker, relativeDest: 'vendor/pdf.worker.min.mjs' });
     },
   },
   // No source maps in the store build (smaller, nothing extra to review); Chrome

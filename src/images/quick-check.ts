@@ -1,5 +1,6 @@
 import type { UploadRequirements } from '../models';
-import { evaluateCompatibility, hasDimensionRules } from '../compatibility';
+import { evaluateCompatibility, guessFormat, hasDimensionRules } from '../compatibility';
+import { isImage } from '../formats';
 import { assertFileSize } from '../security/limits';
 import { displaySize, parseHeader, SIZE_SETTLED_BY_DECODER } from './headers';
 
@@ -16,6 +17,9 @@ export async function isCompatibleByHeader(
   requirements: UploadRequirements,
 ): Promise<boolean> {
   assertFileSize(file.size);
+  // Only an image's header settles anything here; documents are checked by the processor.
+  if (!isImage(guessFormat({ name: file instanceof File ? file.name : '', type: file.type })))
+    return false;
   // The first 256 KB hold the format and size of almost every image; reading a 10 MB
   // file whole would cost tens of milliseconds, and a 5 GB one could crash the page.
   const header =

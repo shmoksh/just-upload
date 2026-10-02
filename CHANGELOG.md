@@ -18,11 +18,19 @@ The first public release.
   "Image upto 2MB", "Photo size should be between 20 KB and 50 KB", "600 × 600 pixels",
   "Please save your file as a TIFF" and 141 tested phrasings in all.
 - **Keeps your photo's pixel size** unless the website states one. A file-size limit is
-  met with quality alone; a photo that can't fit at its full size goes to the website
-  unchanged, with a note.
+  met with quality first. When no quality fits at full size (a 48 MP phone photo on a
+  "max 500 KB" form, or a scanned PDF), it finds the largest smaller size that fits and
+  asks before using it, showing the new size and the quality kept. Say no and the
+  website gets your original.
 - **Minimum file sizes too**, as exam and government forms ask ("between 20 KB and
   50 KB"): a file that is too small is saved in more detail, or padded with bytes image
   readers skip, without changing its pixels.
+- **PDFs and spreadsheets too.** A photo or scan becomes a one-page PDF where a site
+  takes only PDF; a PDF over a size limit is made smaller by saving its pictures at a
+  lower quality, with its text untouched; a PDF becomes a JPG or PNG of its page where a
+  site takes only images. An Excel workbook becomes CSV where a site takes only CSV, and
+  CSV becomes Excel, with codes like 00123 keeping their zeros. A PDF with several pages
+  or a workbook with several sheets asks before using only the first.
 - **Every common format.** Reads JPEG, PNG, WebP, AVIF, GIF, TIFF, BMP, ICO, HEIC/HEIF,
   SVG and JPEG XL. Writes JPEG, PNG, WebP, AVIF, GIF, TIFF, BMP and ICO.
 - **Very large images, up to 5 GB.** JPEG, PNG, TIFF (including BigTIFF) and BMP files
@@ -44,20 +52,28 @@ The first public release.
 
 ### Design
 
-- **A note that shows the change at a glance:** "HEIC 3.1 MB → JPG 1.8 MB", with the
-  quality kept beside it. "Preparing…" turns into the result in place, and the countdown
-  pauses while you point at it.
+- **A note that shows the change at a glance**, on frosted glass like the system's own
+  notifications: "HEIC 3.1 MB → JPG 1.8 MB" in one plain line, and the quality kept as a
+  ring that fills to it. "Preparing…" turns into the result in place, the file lands
+  with a small stamp of green ink, and the countdown pauses while you point at it.
 - **Questions that say who is asking**, with a quality scale that marks where a copy
   starts to look different.
-- **A welcome page that shows how it works**, step by step, on a real-looking form, and
-  lets you try it with your own photo and the website's own wording, showing exactly
-  what the website would get, down to the pixels.
-- **Green and white, or black and green**, following the computer's light or dark
-  setting on every screen: the note on websites, questions, popup, settings and welcome
-  page. A leaf green for "accepted", amber or red only where something needs attention.
+- **A welcome page written as the product's home page:** a refused file stamped
+  "Accepted" (WebP, PNG, PDF and Excel examples, with measured results), the six top
+  features each with a small live picture, how it works step by step on a real-looking
+  form, a place to try it with your own file and the website's own wording, a table of
+  real fixes, and what it never does with your files.
+- **An editorial look on the extension's own pages:** Instrument Serif (SIL Open Font
+  License, packaged) for headings and large figures, hairline rules instead of boxes,
+  and paper grain. Websites only ever see the system font.
+- **Forest and lime, light or dark**, following the computer's setting on every screen:
+  the note on websites, questions, popup, settings and welcome page. White paper with
+  forest ink, lime buttons and highlighter marks, or near-black with lime. A quiet grey or
+  a soft red only where something needs attention; never amber.
 - **The note shows your photo**: the prepared image itself, with a green check on its
   corner, so you see at a glance which photo is ready.
-- **A calmer popup and settings page.**
+- **A calmer popup and settings page**, in the same style: serif titles and figures, a
+  status line that says whether it is on everywhere, and the privacy stamp.
 
 ### Privacy
 

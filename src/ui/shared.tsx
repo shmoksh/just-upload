@@ -1,5 +1,5 @@
 import { domAnimation, LazyMotion, m, MotionConfig } from 'framer-motion';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
 export const PRODUCT_NAME = 'Just Upload';
 
@@ -18,18 +18,18 @@ export function MotionRoot({ children }: { children: ReactNode }) {
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 128 128" fill="none" aria-hidden="true">
-      <rect width="128" height="128" rx="30" fill="#219356" />
+      <rect width="128" height="128" rx="30" fill="#a2ed76" />
       <path
         d="M56 96V32M32 55l24-24 24 24"
-        stroke="#fff"
+        stroke="#0e3a26"
         strokeWidth="13"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="92" cy="92" r="22" fill="#fff" />
+      <circle cx="92" cy="92" r="22" fill="#0e3a26" />
       <path
         d="m82 92 7 7 13-14"
-        stroke="#219356"
+        stroke="#a2ed76"
         strokeWidth="7"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -47,6 +47,50 @@ export function Wordmark({ size = 24 }: { size?: number }) {
   );
 }
 
+let sealCount = 0;
+/**
+ * The stamp a file gets when a website will take it: green ink, slightly uneven. Two
+ * lines on two arcs, so both read upright: one over the top, one under the bottom.
+ */
+export function Seal({
+  top = 'ACCEPTED',
+  bottom = 'READY TO UPLOAD',
+}: {
+  top?: string;
+  bottom?: string;
+}) {
+  const [id] = useState(() => `seal-${++sealCount}`);
+  return (
+    <svg className="seal" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <path id={`${id}-top`} d="M18.5 60a41.5 41.5 0 0 1 83 0" />
+        <path id={`${id}-bottom`} d="M11.3 60a48.7 48.7 0 0 0 97.4 0" />
+        <filter id={`${id}-ink`}>
+          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="7" />
+          <feDisplacementMap in="SourceGraphic" scale="2.4" />
+        </filter>
+      </defs>
+      <g filter={`url(#${id}-ink)`}>
+        <circle cx="60" cy="60" r="56" className="seal-line" />
+        <circle cx="60" cy="60" r="34" className="seal-line thin" />
+        <text className="seal-text">
+          <textPath href={`#${id}-top`} startOffset="50%">
+            {top}
+          </textPath>
+        </text>
+        <text className="seal-text under">
+          <textPath href={`#${id}-bottom`} startOffset="50%">
+            {bottom}
+          </textPath>
+        </text>
+        <circle cx="15" cy="60" r="2.2" className="seal-dot" />
+        <circle cx="105" cy="60" r="2.2" className="seal-dot" />
+        <path d="m46 61 9.5 9.5L75 50.5" className="seal-check" />
+      </g>
+    </svg>
+  );
+}
+
 const ICONS = {
   gear: 'M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4ZM19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7.6 7.6 0 0 1-1.9 1.1L14.9 21h-3.8l-.3-2.5a7.6 7.6 0 0 1-1.9-1.1l-1.9.7-2-3.4 1.6-1.2a7.5 7.5 0 0 1 0-3l-1.6-1.2 2-3.4 1.9.7a7.6 7.6 0 0 1 1.9-1.1L11.1 3h3.8l.3 2.5a7.6 7.6 0 0 1 1.9 1.1l1.9-.7 2 3.4-1.6 1.2a7.5 7.5 0 0 1 0 3Z',
   lock: 'M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5M6 10.5h12a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1Z',
@@ -55,6 +99,9 @@ const ICONS = {
   arrow: 'M4 12h15M14 7l5 5-5 5',
   external: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
   check: 'm5 12.5 4.5 4.5L19 7.5',
+  shield:
+    'M12 3.5 5 6.4v5.3c0 4.2 2.9 7.6 7 8.8 4.1-1.2 7-4.6 7-8.8V6.4L12 3.5ZM9 12l2.2 2.2L15.5 10',
+  bolt: 'M13 3 5.5 13.5H12L11 21l7.5-10.5H12L13 3Z',
   upload: 'M12 15.5V4.5M7.5 9 12 4.5 16.5 9M5 19.5h14',
   download: 'M12 4.5v11M7.5 11l4.5 4.5 4.5-4.5M5 19.5h14',
   copy: 'M9 9h10v11H9zM15 9V4H5v11h4',
@@ -102,7 +149,7 @@ export function FileTag({
 }: {
   name: string;
   size?: string;
-  tone?: 'after' | 'refused' | 'ask';
+  tone?: 'after' | 'refused';
 }) {
   return (
     <span className={tone ? `tag ${tone}` : 'tag'}>

@@ -31,6 +31,19 @@ gradient sky, leaf-like shapes and film grain, or flat panels and lines of text,
 fixed random seed). They are original works of this project with no third-party content
 or rights, and may be redistributed with the project.
 
+## Documents and spreadsheets
+
+| File                   | Made by                                        | What it tests                                     |
+| ---------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| `scan-a4.pdf` (746 KB) | macOS `sips`, from a grainy photo saved as JPG | A scanned page over a limit, made smaller         |
+| `certificate.pdf`      | written by hand (PDF syntax, Helvetica text)   | A one-page PDF drawn as an image                  |
+| `three-pages.pdf`      | written by hand, like `certificate.pdf`        | Asking before using only the first page           |
+| `two-sheets.xlsx`      | written by hand (the XML parts, zipped)        | Asking which sheet; a code stored as text "00123" |
+| `people.csv`           | written by hand, UTF-8                         | Codes with leading zeros, an accented name        |
+
+None was made by pdf-lib, PDF.js or SheetJS, so a test never reads back a file written
+by the code under test.
+
 ## JPEG fixtures for the streaming decoder (`jpeg/`)
 
 Eight small JPEGs (157 × 119, so partial blocks are exercised) covering baseline 4:2:0

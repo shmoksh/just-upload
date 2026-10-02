@@ -5,7 +5,7 @@ import { fail } from '../utils/errors';
 import { padTo } from './pad';
 
 export interface CompressionOptions {
-  /** The pixel size to encode at. It never changes: only the format and quality do. */
+  /** The pixel size to encode at. Only `shrink` can make it smaller. */
   width: number;
   height: number;
   format: OutputFormat;
@@ -17,6 +17,12 @@ export interface CompressionOptions {
   minBytes?: number;
   /** Fewer quality steps for slow encoders (AVIF), trading a little precision for time. */
   searchSteps?: number;
+  /**
+   * When no quality can meet the limit at this pixel size, find the largest smaller size
+   * that fits instead of failing, never below these sides (the website's own minimums).
+   * The caller asks the person before using such a file (see needsShrinkConsent).
+   */
+  shrink?: { minWidth: number; minHeight: number };
 }
 export interface EncodedImage {
   blob: Blob;
@@ -31,11 +37,23 @@ export const QUALITY = Object.freeze({
   /** Used only to bring a small file up to a site's minimum size. */
   highest: 1,
   /**
-   * The lowest quality tried. Pixel dimensions never shrink to meet a file-size limit,
-   * so quality is the only lever; whether a result looks good enough to use without
-   * asking is measured afterwards (see needsQualityConsent).
+   * The lowest quality tried at full size. Quality is the first lever: fewer pixels come
+   * only when even this does not fit, and only with the person's OK. Whether a result
+   * looks good enough to use without asking is measured afterwards (see
+   * needsQualityConsent).
    */
   floor: 0.4,
+  /**
+   * When an image needs fewer pixels to fit, its size is chosen at this quality: the
+   * lowest at which compression still does not show, so as many pixels as possible are
+   * kept. Measured on photos at 500 KB: the same quality kept (95%) as at 0.75, with
+   * about 45% more pixels; lower still starts to show blocks in skies and skin.
+   */
+  fit: 0.6,
+  /** The largest size that fits is found to within this share of its width… */
+  fitPrecision: 0.02,
+  /** …in at most this many encodes. */
+  fitSteps: 7,
   /** Target stays a little under the limit, in case the site counts bytes differently. */
   margin: 0.96,
   searchSteps: 4,
@@ -60,12 +78,81 @@ function interpolate(low: Sample, high: Sample, target: number): number {
   return Math.min(high.quality - margin, Math.max(low.quality + margin, quality));
 }
 
+/** File size at `quality`, between two measured samples (size is about exponential in it). */
+function sizeAt(quality: number, low: Sample, high: Sample): number {
+  const t = (quality - low.quality) / (high.quality - low.quality);
+  return Math.exp(Math.log(low.size) + t * (Math.log(high.size) - Math.log(low.size)));
+}
+
 /**
- * Finds the highest-quality encoding under the size limit, at the image's full pixel
+ * The largest pixel size below the full one at which the image fits `target`, for a
+ * limit no quality can meet at full size: shrinking only as much as needed, never to
+ * whatever is smallest. `full` is the file size at full size, at the quality used.
+ *
+ * File size falls a little more slowly than the pixel count, and how much more slowly
+ * depends on the picture, so each step measures a real encode and aims the next one from
+ * the measurements, closing in on the size where the limit is met.
+ */
+async function shrinkToFit(
+  options: CompressionOptions,
+  encode: Encoder,
+  target: number,
+  full: Sample,
+): Promise<EncodedImage> {
+  const { width, height, shrink } = options;
+  if (!shrink) return fail('target-unreachable');
+  const { quality } = full;
+  // Each side at least one pixel, and at least the website's own minimum.
+  const smallest = Math.min(
+    1,
+    Math.max(1 / Math.min(width, height), shrink.minWidth / width, shrink.minHeight / height),
+  );
+  /** A size tried, as a share of the full width, and the bytes it took. */
+  interface Point {
+    scale: number;
+    size: number;
+  }
+  let fits: { scale: number; image: EncodedImage } | undefined;
+  let tooBig: Point = { scale: 1, size: full.size };
+  let last: Point = tooBig;
+  // A first guess: size about proportional to pixels^0.9, so to scale^1.8.
+  let exponent = 1.8;
+  let scale = Math.min(0.98, ((target * 0.97) / full.size) ** (1 / exponent));
+  for (let step = 0; step < QUALITY.fitSteps; step++) {
+    scale = Math.max(smallest, scale);
+    const w = Math.max(1, Math.round(width * scale));
+    const h = Math.max(1, Math.round(height * scale));
+    const blob = await encode(w, h, quality);
+    const point: Point = { scale, size: blob.size };
+    if (blob.size <= target) {
+      if (!fits || scale > fits.scale)
+        fits = { scale, image: { blob, width: w, height: h, quality } };
+    } else if (scale <= smallest) break;
+    else if (scale < tooBig.scale) tooBig = point;
+    if (fits && tooBig.scale / fits.scale - 1 <= QUALITY.fitPrecision) break;
+    // How size changes with scale for this picture, from the last two measurements.
+    if (point.scale !== last.scale && point.size !== last.size) {
+      const slope = Math.log(point.size / last.size) / Math.log(point.scale / last.scale);
+      if (Number.isFinite(slope)) exponent = Math.min(2.5, Math.max(1, slope));
+    }
+    last = point;
+    let next = scale * ((target * 0.985) / blob.size) ** (1 / exponent);
+    // Fits, and the measurements say only a sliver more would: close enough.
+    if (blob.size <= target && next / scale - 1 <= QUALITY.fitPrecision) break;
+    // Stay strictly between the largest size that fits and the smallest that does not.
+    if (next >= tooBig.scale) next = Math.sqrt((fits?.scale ?? smallest) * tooBig.scale);
+    else if (fits && next <= fits.scale) next = Math.sqrt(fits.scale * tooBig.scale);
+    scale = next;
+  }
+  return fits ? fits.image : fail('target-unreachable');
+}
+
+/**
+ * Finds the highest-quality encoding under the size limit at the image's full pixel
  * size: it measures real encoded sizes and searches quality down to a floor. If even the
- * floor does not fit, the target is unreachable without changing the pixel size, which
- * Just Upload never does unless the website states one, so it ends with an error and the
- * website gets the original.
+ * floor does not fit, the target is unreachable at full size: with `shrink`, the largest
+ * smaller size that fits is found instead (see shrinkToFit); without it, it ends with an
+ * error and the website gets the original.
  *
  * Every encode of a large photo costs tens of milliseconds, so the search predicts
  * rather than bisects. The encoder is injected so the search can be tested without a
@@ -94,10 +181,18 @@ export async function compressToTarget(
     }
     return { ...result, blob: await padTo(result.blob, options.format, minimum) };
   }
-  // A lossless format holds exactly its pixels: there is nothing to trade.
-  if (!isLossy(options.format)) fail('target-unreachable');
+  // A lossless format holds exactly its pixels: only fewer of them make it smaller.
+  if (!isLossy(options.format))
+    return shrinkToFit(options, encode, target, { quality: QUALITY.max, size: best.size });
   const lowest = await encode(width, height, QUALITY.floor);
-  if (lowest.size > target) fail('target-unreachable');
+  if (lowest.size > target) {
+    const floor: Sample = { quality: QUALITY.floor, size: lowest.size };
+    const top: Sample = { quality: QUALITY.max, size: best.size };
+    return shrinkToFit(options, encode, target, {
+      quality: QUALITY.fit,
+      size: sizeAt(QUALITY.fit, floor, top),
+    });
+  }
   let result: EncodedImage = { blob: lowest, width, height, quality: QUALITY.floor };
   let low: Sample = { quality: QUALITY.floor, size: lowest.size };
   let high: Sample = { quality: QUALITY.max, size: best.size };

@@ -173,6 +173,37 @@ describe('copy', () => {
       decline: 'Cancel',
     });
   });
+  it('says what fewer pixels means: the new size, and the quality it keeps', () => {
+    const shrink = (outputFormat: 'jpeg' | 'pdf') => ({
+      action: 'USER_CONFIRMATION' as const,
+      issues: [],
+      outputFormat,
+      consents: ['shrink' as const],
+    });
+    const rules = parseText('File size should not exceed 500 KB');
+    const photo = { format: 'jpeg' as const, width: 6240, height: 4160 };
+    const fitted = { width: 2830, height: 1887 };
+    expect(dialogCopy(shrink('jpeg'), rules, false, 97, { ...photo, fitted })).toEqual({
+      title: 'This image can’t fit 500 KB at full size',
+      body: 'To fit, it needs fewer pixels: 6240 × 4160 → 2830 × 1887. It keeps 97% of its quality, so it looks the same on a screen.',
+      notes: [],
+      confirm: 'Make it smaller',
+      decline: 'Use original',
+    });
+    expect(dialogCopy(shrink('jpeg'), rules, false, 93, { ...photo, fitted }).body).toBe(
+      'To fit, it needs fewer pixels: 6240 × 4160 → 2830 × 1887. It keeps 93% of its quality.',
+    );
+    const scan = {
+      format: 'pdf' as const,
+      width: 2480,
+      height: 3508,
+      fitted: { width: 1240, height: 1754 },
+    };
+    expect(dialogCopy(shrink('pdf'), rules, false, 94, scan)).toMatchObject({
+      title: 'This PDF can’t fit 500 KB at full size',
+      body: 'To fit, its pictures need fewer pixels (the largest goes from 2480 × 3508 to 1240 × 1754). Its text and layout stay the same, and the pictures keep 94% of their quality.',
+    });
+  });
 });
 
 describe('crop math', () => {
@@ -254,18 +285,30 @@ describe('picker widening', () => {
       '.ico',
       '.svg',
       '.jxl',
+      // A PDF's first page can become the image.
+      '.pdf',
     ]) {
       expect(widened.split(',')).toContain(token);
     }
     expect(widened.split(',')).not.toContain('.jpg');
+    // A spreadsheet can never become an image.
+    expect(widened.split(',')).not.toContain('.csv');
     expect(widenedAccept('.jpg')).toContain('.png');
   });
-  it('leaves wildcards, non-image fields and complete lists alone', () => {
+  it('offers images on a PDF field, and the other spreadsheet format on a spreadsheet field', () => {
+    const pdf = widenedAccept('application/pdf')!.split(',');
+    expect(pdf).toEqual(expect.arrayContaining(['.heic', '.jpg', '.png', '.webp']));
+    expect(pdf).not.toContain('.xlsx');
+    const csv = widenedAccept('.csv')!.split(',');
+    expect(csv).toEqual(expect.arrayContaining(['.xlsx', '.xls']));
+    expect(csv).not.toContain('.jpg');
+    expect(widenedAccept('.xlsx')!.split(',')).toEqual(expect.arrayContaining(['.csv', '.xls']));
+  });
+  it('leaves wildcards and complete lists alone', () => {
     expect(widenedAccept('image/*')).toBeUndefined();
     expect(widenedAccept('image/*,.pdf')).toBeUndefined();
-    expect(widenedAccept('application/pdf')).toBeUndefined();
     expect(widenedAccept('')).toBeUndefined();
-    const everything = '.jpg,.png,.webp,.avif,.gif,.tif,.bmp,.ico,.heic,.svg,.jxl';
+    const everything = '.jpg,.png,.webp,.avif,.gif,.tif,.bmp,.ico,.heic,.svg,.jxl,.pdf';
     expect(widenedAccept(everything)).toBeUndefined();
   });
 });

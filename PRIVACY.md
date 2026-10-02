@@ -1,6 +1,7 @@
 # Privacy
 
-**Your images are processed on your device. Just Upload does not upload them to its own
+**Your images, PDFs and spreadsheets are processed on your device. Just Upload does not
+upload them to its own
 servers. It has no servers.**
 
 This page describes how the extension handles data. The store-ready privacy policy is in
@@ -8,10 +9,10 @@ This page describes how the extension handles data. The store-ready privacy poli
 
 ## What is processed, and where
 
-When you choose an image in a website's upload field, or drop one on its upload area,
+When you choose a file in a website's upload field, or drop one on its upload area,
 Just Upload reads:
 
-- **The image you chose**, to check its format, size and dimensions and, if the website
+- **The file you chose**, to check its format, size and dimensions and, if the website
   needs it, to prepare a compatible copy. This happens inside your browser, on your
   computer: in a hidden Just Upload frame added to the tab (an extension page that the
   website cannot look into) and in background workers it starts.
@@ -19,7 +20,7 @@ Just Upload reads:
   hint text such as "JPG or PNG, max 2 MB"), to learn what the website accepts. It never
   reads the rest of the page, form values or anything you type.
 
-The prepared image goes only to the website you chose, exactly as your original would
+The prepared file goes only to the website you chose, exactly as your original would
 have. Nothing is sent anywhere else.
 
 ## What is stored
@@ -27,15 +28,15 @@ have. Nothing is sent anywhere else.
 Only on your device, in the extension's local storage:
 
 - Your settings (on/off switches and any sites where you paused Just Upload).
-- A count of images fixed, by kind (converted, resized, made smaller, cropped), plus a
+- A count of files fixed, by kind (converted, resized, made smaller, cropped), plus a
   count for the current browser session.
-- Up to 20 **problem notes**, one for each image that could not be prepared: when it
-  happened, what went wrong (for example "the image could not be read"), the image's
+- Up to 20 **problem notes**, one for each file that could not be prepared: when it
+  happened, what went wrong (for example "the file could not be read"), the file's
   format and its size rounded to two figures, and the upload field's rules in Just
   Upload's own words (for example "JPG · max 2 MB").
 
-Just Upload never stores images, file names, website addresses, page text or upload
-history. Prepared images exist only in memory for as long as it takes to hand them to
+Just Upload never stores files, file names, website addresses, page text or upload
+history. Prepared files exist only in memory for as long as it takes to hand them to
 the website.
 
 ## What is never transmitted
@@ -60,7 +61,7 @@ permission.
 
 ## Deleting your data
 
-- **Counts:** Settings → Images fixed → Reset.
+- **Counts:** Settings → Files fixed → Reset.
 - **Problem notes:** Settings → Problems → Clear notes.
 - **Paused sites:** Settings → Paused sites → Resume.
 - **Everything:** uninstalling the extension removes all of its stored data.

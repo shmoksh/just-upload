@@ -3,7 +3,8 @@ import { errorCode } from '../utils/errors';
 import { deserializeFile, serializeFile } from '../utils/files';
 import { sanitizeOptions, sanitizeRequirements, type JobResponse } from './protocol';
 import { heicDecoder } from './heic';
-import { prepareImage, transformImage, warmResizer } from './transform';
+import { prepareImage, warmResizer } from './transform';
+import { prepareFile, transformFile } from '../documents/route';
 
 async function serializeResult(result: TransformResult): Promise<SerializedTransform> {
   return { ...result, file: await serializeFile(result.file) };
@@ -62,13 +63,17 @@ globalThis.onmessage = async (event: MessageEvent<Record<string, unknown>>) => {
           : deserializeFile(message.file);
     const serialize = message.serialize !== false;
     const requirements = sanitizeRequirements(message.requirements);
-    // SVG arrives already rendered to pixels by the extension page.
+    // SVG, and a PDF page for a site that takes images, arrive drawn by the extension page.
     const raster = message.raster instanceof Blob ? message.raster : undefined;
+    const pages =
+      typeof message.pages === 'number' && Number.isInteger(message.pages) && message.pages > 0
+        ? message.pages
+        : undefined;
     const progress = progressReporter();
     const asResult = (result: TransformResult) =>
       serialize ? serializeResult(result) : Promise.resolve(result);
     if (message.kind === 'prepare') {
-      const outcome = await prepareImage(file, requirements, raster, progress);
+      const outcome = await prepareFile(file, requirements, raster, pages, progress);
       let value: unknown;
       if (outcome.kind === 'fixed')
         value = { kind: 'fixed', result: await asResult(outcome.result) };
@@ -82,11 +87,12 @@ globalThis.onmessage = async (event: MessageEvent<Record<string, unknown>>) => {
       response = {
         ok: true,
         value: await asResult(
-          await transformImage(
+          await transformFile(
             file,
             requirements,
             sanitizeOptions(message.options),
             raster,
+            pages,
             progress,
           ),
         ),
