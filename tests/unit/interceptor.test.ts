@@ -457,6 +457,32 @@ describe('failing open', () => {
     await vi.waitFor(() => expect(changes()).toEqual([['broken.png']]));
     expect(ui.failure).toHaveBeenCalledWith('damaged', false, 'image');
   });
+  it('prepares the rest of a selection when one file cannot be, and says so', async () => {
+    prepare.mockImplementation(async (file) => {
+      if (file.name === 'b.heic') throw new ProcessingError('damaged');
+      return { kind: 'fixed', result: converted(file.name.replace(/\.\w+$/, '.jpg')) };
+    });
+    const input = page('<input type="file" accept="image/jpeg" multiple>');
+    const broken = heic('b.heic');
+    choose(input, [heic('a.heic'), broken, heic('c.heic')]);
+    await vi.waitFor(() => expect(changes()).toEqual([['a.jpg', 'b.heic', 'c.jpg']]));
+    expect(selections.get(input)?.[1]).toBe(broken);
+    expect(onFixed.mock.calls[0]![0]).toHaveLength(2);
+    expect(ui.success).toHaveBeenCalledWith(expect.any(Array), 1);
+    expect(ui.failure).not.toHaveBeenCalled();
+    // The one that failed still leaves its note for a problem report.
+    expect(onProblem).toHaveBeenCalledTimes(1);
+    expect(onProblem.mock.calls[0]!.slice(0, 2)).toEqual(['damaged', [broken]]);
+  });
+  it('hands over the whole selection as it was when none of it could be prepared', async () => {
+    prepare.mockRejectedValue(new ProcessingError('damaged'));
+    const input = page('<input type="file" accept="image/jpeg" multiple>');
+    choose(input, [heic('a.heic'), heic('b.heic')]);
+    await vi.waitFor(() => expect(changes()).toEqual([['a.heic', 'b.heic']]));
+    expect(ui.failure).toHaveBeenCalledWith('damaged', false, 'image');
+    expect(ui.success).not.toHaveBeenCalled();
+    expect(onFixed).not.toHaveBeenCalled();
+  });
   it('explains when an image is too large to prepare safely', async () => {
     const input = page('<input type="file" accept="image/jpeg">');
     const huge = heic('huge.heic');

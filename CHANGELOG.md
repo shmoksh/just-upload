@@ -23,6 +23,7 @@ The first public release.
 - **Fix a file yourself:** when a website never states its rules, type them in from the
   Just Upload button and save the copy.
 - **Safe by default.** If anything goes wrong, the website gets your original file.
+  When one of several files can't be prepared, the others still are.
   Problem notes stay on your device until you choose to send one.
 - **Private by design.** No servers, no account, no analytics. Your originals are never
   changed.

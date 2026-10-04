@@ -342,24 +342,39 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
       for (const inspection of inspections) inspection.catch(() => {});
       const replacements: File[] = [];
       const results: TransformResult[] = [];
+      const unprepared: { file: File; code: ErrorCode }[] = [];
       // Awaited in order, so the site receives the files in the order they were chosen.
-      for (const inspection of inspections) {
-        const prepared = await answerFile(
-          session,
-          await inspection,
-          requirements,
-          preferences,
-          notice,
-        );
-        replacements.push(prepared.file);
-        if (prepared.result) results.push(prepared.result);
+      for (const [index, inspection] of inspections.entries()) {
+        try {
+          const prepared = await answerFile(
+            session,
+            await inspection,
+            requirements,
+            preferences,
+            notice,
+          );
+          replacements.push(prepared.file);
+          if (prepared.result) results.push(prepared.result);
+        } catch (error) {
+          // One of several files that cannot be prepared goes to the site as it is, and
+          // the rest are still prepared. A selection that went stale, was declined, or
+          // holds a file the site would never have accepted ends as a whole.
+          const code = errorCode(error);
+          if (error instanceof Declined || code === 'cancelled' || session.unlocked) throw error;
+          const file = session.original[index]!;
+          unprepared.push({ file, code });
+          replacements.push(file);
+        }
       }
       if (!isCurrent(session)) return;
+      // Nothing could be prepared: the selection fails open as one, with its message.
+      if (unprepared.length && !results.length) fail(unprepared[0]!.code);
       notice.stop();
       deliver(session, results.length ? replacements : undefined);
       if (results.length) {
         deps.onFixed(results);
-        if (deps.settings().showNotifications) deps.ui.success(results);
+        for (const { file, code } of unprepared) deps.onProblem?.(code, [file], requirements);
+        if (deps.settings().showNotifications) deps.ui.success(results, unprepared.length);
       }
     } catch (error) {
       batch.abort();

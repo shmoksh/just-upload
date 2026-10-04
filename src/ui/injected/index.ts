@@ -14,7 +14,8 @@ export interface PageUi {
   processing(count: number, noun?: string): () => void;
   /** How much of a large image has been read, shown in the "Preparing…" notice. */
   progress?(count: number, fraction: number, noun?: string): void;
-  success(results: TransformResult[]): void;
+  /** `unprepared`: files of the same selection that go to the site as they were. */
+  success(results: TransformResult[], unprepared?: number): void;
   failure(code: ErrorCode, removed: boolean, noun?: string): void;
   confirm(request: ConfirmRequest, signal: AbortSignal): Promise<ConfirmAnswer | null>;
 }
@@ -39,7 +40,7 @@ export const pageUi: PageUi = {
       () => updateProcessingToast(processingCopy(count, undefined, noun).title, fraction),
       undefined,
     ),
-  success: (results) =>
+  success: (results, unprepared) =>
     quietly(() => {
       const [first] = results;
       // Only an image is shown as a picture; a PDF or spreadsheet keeps the plain check.
@@ -47,7 +48,7 @@ export const pageUi: PageUi = {
         first && isImage(first.finalFormat)
           ? { file: first.file, width: first.finalWidth, height: first.finalHeight }
           : undefined;
-      void showToast('success', successCopy(results), undefined, photo);
+      void showToast('success', successCopy(results, unprepared), undefined, photo);
     }, undefined),
   failure: (code, removed, noun) =>
     quietly(

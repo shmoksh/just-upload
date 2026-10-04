@@ -50,6 +50,8 @@ export interface Receipt {
   pixels?: { from: string; to: string };
   /** The DPI saved in the file, when the site asked for one. */
   dpi?: number;
+  /** Files chosen with these that could not be prepared: "1 file stays as it was …". */
+  unprepared?: string;
 }
 
 export interface ToastCopy {
@@ -73,8 +75,25 @@ export function printSize(widthMm: number, heightMm: number): string {
   return `${trimmed(widthMm / 10)} × ${trimmed(heightMm / 10)} cm`;
 }
 
-/** "HEIC → JPG · 5.8 MB → 1.8 MB · Quality kept: 98%" */
-export function successCopy(results: TransformResult[]): ToastCopy {
+/**
+ * "HEIC → JPG · 5.8 MB → 1.8 MB · Quality kept: 98%". When some files of a selection
+ * could not be prepared, it says how many go to the website as they were.
+ */
+export function successCopy(results: TransformResult[], unprepared = 0): ToastCopy {
+  const copy = preparedCopy(results);
+  if (!unprepared) return copy;
+  const left =
+    unprepared === 1
+      ? '1 file couldn’t be prepared and stays as it was'
+      : `${unprepared} files couldn’t be prepared and stay as they were`;
+  return {
+    ...copy,
+    detail: copy.detail ? `${copy.detail}. ${left}` : left,
+    receipt: { noticeable: false, ...copy.receipt, unprepared: left },
+  };
+}
+
+function preparedCopy(results: TransformResult[]): ToastCopy {
   if (results.length > 1) {
     const kept = results
       .filter((result) => !isSheet(result.finalFormat))

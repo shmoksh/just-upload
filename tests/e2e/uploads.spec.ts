@@ -235,6 +235,28 @@ test.describe('automatic fixes', () => {
     expect(receipt.files[1]!.size).toBe(second.buffer.length);
   });
 
+  test('when one of several files cannot be prepared, the others still are', async ({ site }) => {
+    const first = await makeImage(site, 'one.webp', {
+      width: 300,
+      height: 200,
+      type: 'image/webp',
+    });
+    const broken = fixture('landscape-1600x1200.heic', 'image/heic', 'broken.heic');
+    broken.buffer = broken.buffer.subarray(0, 4096);
+    const third = await makeImage(site, 'three.png', {
+      width: 300,
+      height: 200,
+      type: 'image/png',
+    });
+    await site.setInputFiles('#multiple', [first, broken, third]);
+    const receipt = await received(site, 'multiple');
+    // The damaged photo goes to the site as it was, in its place; the others are JPGs.
+    expect(receipt.files.map((file) => file.name)).toEqual(['one.jpg', 'broken.heic', 'three.jpg']);
+    expect(receipt.files[1]!.size).toBe(4096);
+    await expect(toast(site)).toContainText('Ready to upload');
+    await expect(toast(site)).toContainText('1 file couldn’t be prepared and stays as it was');
+  });
+
   test('a form submitted while an image is being prepared sends the prepared image', async ({
     site,
   }) => {

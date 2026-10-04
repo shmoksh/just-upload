@@ -131,6 +131,7 @@ function receiptRow(receipt: Receipt): HTMLElement {
           .filter(Boolean)
           .join(' · '),
       ),
+    receipt.unprepared && h('p', { class: 'ju-pixels' }, receipt.unprepared),
   );
 }
 
@@ -234,7 +235,8 @@ class Toast {
         h('span', { class: 'ju-meter-label' }, 'quality kept'),
       );
 
-    const duration = DURATION[kind];
+    // A note that also says a file was left as it was stays as long as an error does.
+    const duration = receipt?.unprepared ? DURATION.error : DURATION[kind];
     this.timer.hidden = !duration;
     if (duration) {
       this.timer.style.setProperty('--ju-duration', `${duration}ms`);

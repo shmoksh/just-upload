@@ -339,6 +339,15 @@ describe('message boundaries', () => {
       allowUpscale: false,
     });
   });
+  it('says how many files of a selection went to the site as they were', () => {
+    const one = successCopy([result(), result()], 1);
+    expect(one.detail).toMatch(/\. 1 file couldn’t be prepared and stays as it was$/);
+    expect(one.receipt?.unprepared).toBe('1 file couldn’t be prepared and stays as it was');
+    expect(successCopy([result()], 2).receipt?.unprepared).toBe(
+      '2 files couldn’t be prepared and stay as they were',
+    );
+    expect(successCopy([result()]).receipt?.unprepared).toBeUndefined();
+  });
   it('carries a chosen sheet only as a small whole number', () => {
     expect(sanitizeOptions({ outputFormat: 'csv', sheet: 2 })).toMatchObject({ sheet: 2 });
     for (const sheet of [0, -1, 1.5, 1e6, '2'])
