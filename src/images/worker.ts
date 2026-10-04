@@ -79,7 +79,15 @@ globalThis.onmessage = async (event: MessageEvent<Record<string, unknown>>) => {
         value = { kind: 'fixed', result: await asResult(outcome.result) };
       else if (outcome.kind === 'confirm')
         value = serialize
-          ? { ...outcome, preview: await serializeFile(outcome.preview, 'preview') }
+          ? {
+              ...outcome,
+              preview: await serializeFile(outcome.preview, 'preview'),
+              ...(outcome.previews && {
+                previews: await Promise.all(
+                  outcome.previews.map((blob) => serializeFile(blob, 'preview')),
+                ),
+              }),
+            }
           : outcome;
       else value = outcome;
       response = { ok: true, value } as JobResponse;

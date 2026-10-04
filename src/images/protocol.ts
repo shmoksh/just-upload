@@ -30,7 +30,13 @@ export type JobRequest =
 export type SerializedPrepare =
   | { kind: 'pass' }
   | { kind: 'fixed'; result: SerializedTransform }
-  | { kind: 'confirm'; decision: Decision; info: ImageInfo; preview: SerializedFile }
+  | {
+      kind: 'confirm';
+      decision: Decision;
+      info: ImageInfo;
+      preview: SerializedFile;
+      previews?: SerializedFile[];
+    }
   | { kind: 'unsafe'; code: ErrorCode };
 
 export type JobResponse<T = SerializedPrepare | SerializedTransform> =
@@ -96,11 +102,15 @@ function sanitizeCrop(value: unknown): CropRect | undefined {
 export function sanitizeOptions(value: unknown): TransformOptions {
   const input = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const crop = sanitizeCrop(input.crop);
+  const { sheet } = input;
   return {
     outputFormat: [...OUTPUT_FORMATS, 'pdf', 'csv', 'xlsx'].includes(input.outputFormat as string)
       ? (input.outputFormat as FileOutput)
       : 'jpeg',
     ...(crop ? { crop } : {}),
+    ...(typeof sheet === 'number' && Number.isInteger(sheet) && sheet > 0 && sheet < 1000
+      ? { sheet }
+      : {}),
     allowTransparencyLoss: input.allowTransparencyLoss === true,
     allowAnimationLoss: input.allowAnimationLoss === true,
     allowUpscale: input.allowUpscale === true,

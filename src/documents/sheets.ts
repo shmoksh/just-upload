@@ -17,6 +17,8 @@ import { fail } from '../utils/errors';
 
 /** Workbooks are read whole, and a compressed one can unpack to many times its size. */
 const MAX_SHEET_BYTES = 25 * 1024 * 1024;
+/** Sheets offered to choose from; a workbook with more is rare. */
+const MAX_LISTED_SHEETS = 50;
 
 type SheetJs = typeof import('xlsx');
 let library: Promise<SheetJs> | undefined;
@@ -34,12 +36,21 @@ function decodeText(bytes: Uint8Array): string {
   }
 }
 
-async function readWorkbook(file: Blob, format: SheetFormat): Promise<WorkBook> {
+async function readWorkbook(
+  file: Blob,
+  format: SheetFormat,
+  output: 'csv' | 'xlsx',
+): Promise<WorkBook> {
   if (file.size > MAX_SHEET_BYTES) fail('too-large-to-process');
   const XLSX = await sheetjs();
   try {
     if (format !== 'csv')
-      return XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
+      // For a CSV file, cells without a value are kept: a formula that was never
+      // calculated is one, and has to be noticed (see `uncalculated`).
+      return XLSX.read(new Uint8Array(await file.arrayBuffer()), {
+        type: 'array',
+        sheetStubs: output === 'csv',
+      });
     // Every cell is read as written; only plain numbers become numbers, so codes with
     // leading zeros and dates are not rewritten the way a spreadsheet app would.
     const workbook = XLSX.read(decodeText(new Uint8Array(await file.arrayBuffer())), {
@@ -89,19 +100,32 @@ async function previewSheet(sheet: WorkSheet): Promise<Blob> {
   return canvas.convertToBlob({ type: 'image/png' });
 }
 
+/**
+ * Whether a sheet has formulas with no saved result, as workbooks written by a script
+ * often do. A CSV file holds values, not formulas, so such a cell would come out empty
+ * or as the formula's own text.
+ */
+const uncalculated = (sheet: WorkSheet): boolean =>
+  Object.entries(sheet).some(
+    ([address, cell]) =>
+      !address.startsWith('!') && cell.f !== undefined && (cell.t === 'z' || cell.v === undefined),
+  );
+
 async function convert(
   file: File,
   format: SheetFormat,
   workbook: WorkBook,
   output: 'csv' | 'xlsx',
   requirements: UploadRequirements,
+  chosen = 0,
 ): Promise<TransformResult> {
   const XLSX = await sheetjs();
-  const [first] = workbook.SheetNames;
-  if (!first) return fail('damaged');
+  const sheet = workbook.Sheets[workbook.SheetNames[chosen] ?? ''];
+  if (!sheet) return fail('damaged');
+  if (output === 'csv' && uncalculated(sheet)) fail('uncalculated-formulas');
   const data =
     output === 'csv'
-      ? XLSX.utils.sheet_to_csv(workbook.Sheets[first]!)
+      ? XLSX.utils.sheet_to_csv(sheet)
       : (XLSX.write(workbook, {
           type: 'array',
           bookType: 'xlsx',
@@ -114,7 +138,7 @@ async function convert(
   if (requirements.maxBytes !== undefined && result.size > requirements.maxBytes)
     fail('target-unreachable');
   const changes: TransformChange[] = ['converted'];
-  if (output === 'csv' && workbook.SheetNames.length > 1) changes.push('first-sheet');
+  if (output === 'csv' && workbook.SheetNames.length > 1) changes.push('one-sheet');
   return {
     file: result,
     changes,
@@ -139,7 +163,7 @@ const sheetTarget = (format: SheetFormat, requirements: UploadRequirements) =>
 
 /**
  * A spreadsheet in a format the site takes is left alone. Otherwise it becomes the one it
- * takes; a CSV file holds one sheet, so a workbook with several asks first.
+ * takes; a CSV file holds one sheet, so a workbook with several asks which.
  */
 export async function prepareSheet(
   file: File,
@@ -149,8 +173,11 @@ export async function prepareSheet(
   if (formatAllowed(format, requirements)) return { kind: 'pass' };
   const output = sheetTarget(format, requirements);
   if (!output) return { kind: 'pass' };
-  const workbook = await readWorkbook(file, format);
+  const workbook = await readWorkbook(file, format, output);
   if (output === 'csv' && workbook.SheetNames.length > 1) {
+    const sheets = workbook.SheetNames.slice(0, MAX_LISTED_SHEETS);
+    const previews: Blob[] = [];
+    for (const name of sheets) previews.push(await previewSheet(workbook.Sheets[name]!));
     return {
       kind: 'confirm',
       decision: {
@@ -166,9 +193,10 @@ export async function prepareSheet(
         bytes: file.size,
         transparent: false,
         animated: false,
-        sheets: workbook.SheetNames.slice(0, 50),
+        sheets,
       },
-      preview: await previewSheet(workbook.Sheets[workbook.SheetNames[0]!]!),
+      preview: previews[0]!,
+      previews,
     };
   }
   return { kind: 'fixed', result: await convert(file, format, workbook, output, requirements) };
@@ -182,5 +210,12 @@ export async function transformSheet(
 ): Promise<TransformResult> {
   const output = options.outputFormat;
   if (output !== 'csv' && output !== 'xlsx') return fail('unsupported-format');
-  return convert(file, format, await readWorkbook(file, format), output, requirements);
+  return convert(
+    file,
+    format,
+    await readWorkbook(file, format, output),
+    output,
+    requirements,
+    options.sheet,
+  );
 }

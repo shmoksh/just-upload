@@ -117,7 +117,7 @@ export function successCopy(results: TransformResult[]): ToastCopy {
     parts.push('Brought up to the site’s minimum');
   else parts.push('Made smaller');
   if (result.changes.includes('first-page')) parts.push('First page');
-  if (result.changes.includes('first-sheet')) parts.push('First sheet');
+  if (result.changes.includes('one-sheet')) parts.push('One sheet');
   // A converted JPG is often larger than its HEIC; only a smaller size is worth mentioning.
   // A file brought up to a site's minimum grew on purpose: that is worth showing too.
   const smaller =
@@ -173,6 +173,12 @@ export function processingCopy(count: number, fraction?: number, noun = 'image')
  * became selectable because Just Upload widened the picker; then it is removed.
  */
 export function failureCopy(code: ErrorCode, removed: boolean, noun = 'image'): ToastCopy {
+  if (code === 'uncalculated-formulas') {
+    return {
+      title: 'This sheet’s formulas have no saved results',
+      detail: 'Open the workbook in Excel or Google Sheets, save it, then choose it again.',
+    };
+  }
   if (removed)
     return { title: `Couldn’t prepare this ${noun}`, detail: 'Please choose a different file.' };
   if (code === 'too-large-to-process') {
@@ -295,8 +301,8 @@ const LEAD: Record<
   }),
   sheet: (_requirements, decision, _quality, counts) => ({
     title: `This site takes a ${formatLabel(decision.outputFormat ?? 'csv')} file`,
-    body: `Your workbook has ${counts.sheets?.length ?? 'several'} sheets, and a CSV file holds one, so “${counts.sheets?.[0] ?? 'the first sheet'}” will be used.`,
-    confirm: 'Use the first sheet',
+    body: `Your workbook has ${counts.sheets?.length ?? 'several'} sheets, and a CSV file holds one. Choose the sheet to upload.`,
+    confirm: 'Use this sheet',
   }),
 };
 
@@ -309,7 +315,7 @@ const NOTE: Record<Consent, string> = {
   shrink: 'It will have fewer pixels, to fit the limit.',
   quality: 'Some quality will be lost.',
   page: 'Only the first page will be used.',
-  sheet: 'Only the first sheet will be used.',
+  sheet: 'Only one sheet will be used.',
 };
 
 export function dialogCopy(
@@ -361,6 +367,7 @@ export function problemLabel(code: ErrorCode): string {
     'too-large-to-process': 'The image was too large to prepare',
     'target-unreachable': 'The image could not be made small enough',
     'rules-conflict': 'The site’s rules contradict each other',
+    'uncalculated-formulas': 'The sheet’s formulas had no saved results',
     timeout: 'Preparing the image took too long',
     busy: 'Too many images at once',
     'empty-file': 'The file was empty',

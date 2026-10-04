@@ -339,6 +339,11 @@ describe('message boundaries', () => {
       allowUpscale: false,
     });
   });
+  it('carries a chosen sheet only as a small whole number', () => {
+    expect(sanitizeOptions({ outputFormat: 'csv', sheet: 2 })).toMatchObject({ sheet: 2 });
+    for (const sheet of [0, -1, 1.5, 1e6, '2'])
+      expect(sanitizeOptions({ outputFormat: 'csv', sheet })).not.toHaveProperty('sheet');
+  });
   it('round-trips files through base64 exactly', async () => {
     const bytes = new Uint8Array(70_000).map((_, i) => (i * 31) % 256);
     expect(base64ToBytes(bytesToBase64(bytes))).toEqual(bytes);

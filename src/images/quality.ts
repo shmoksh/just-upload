@@ -6,9 +6,56 @@ const MAX_TILES_PER_SIDE = 8;
 const C1 = (0.01 * 255) ** 2;
 const C2 = (0.03 * 255) ** 2;
 
+/** A picture as brightness and two colour channels, the way JPEG splits it. */
+function planes(pixels: Uint8ClampedArray, length: number): Float32Array[] {
+  const brightness = new Float32Array(length);
+  const blue = new Float32Array(length);
+  const red = new Float32Array(length);
+  for (let i = 0, j = 0; j < length; i += 4, j++) {
+    const [r, g, b] = [pixels[i]!, pixels[i + 1]!, pixels[i + 2]!];
+    brightness[j] = 0.299 * r + 0.587 * g + 0.114 * b;
+    blue[j] = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    red[j] = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+  }
+  return [brightness, blue, red];
+}
+
+/** SSIM of the 8 × 8 block at (x, y) in one channel of two images. */
+function blockSsim(a: Float32Array, b: Float32Array, width: number, x: number, y: number): number {
+  let meanA = 0;
+  let meanB = 0;
+  for (let row = 0; row < 8; row++)
+    for (let column = 0; column < 8; column++) {
+      const k = (y + row) * width + x + column;
+      meanA += a[k]!;
+      meanB += b[k]!;
+    }
+  meanA /= 64;
+  meanB /= 64;
+  let varianceA = 0;
+  let varianceB = 0;
+  let covariance = 0;
+  for (let row = 0; row < 8; row++)
+    for (let column = 0; column < 8; column++) {
+      const k = (y + row) * width + x + column;
+      const da = a[k]! - meanA;
+      const db = b[k]! - meanB;
+      varianceA += da * da;
+      varianceB += db * db;
+      covariance += da * db;
+    }
+  return (
+    ((2 * meanA * meanB + C1) * ((2 * covariance) / 63 + C2)) /
+    ((meanA * meanA + meanB * meanB + C1) * ((varianceA + varianceB) / 63 + C2))
+  );
+}
+
 /**
- * Sum of SSIM over the 8 × 8 blocks of brightness that fit in two equally sized RGBA
- * images, and how many blocks there were.
+ * Sum of the similarity of the 8 × 8 blocks that fit in two equally sized RGBA images,
+ * and how many blocks there were. A block's similarity is the SSIM of its brightness,
+ * lowered when its colour fared worse: colour counts for a quarter (6:1:1, the weights
+ * video tools use) and never raises a score, so smeared coloured text is not hidden by
+ * brightness that came through well.
  */
 export function blockSimilarity(
   a: Uint8ClampedArray,
@@ -16,43 +63,16 @@ export function blockSimilarity(
   width: number,
   height: number,
 ): { sum: number; count: number } {
-  const luma = (pixels: Uint8ClampedArray) => {
-    const out = new Float32Array(width * height);
-    for (let i = 0, j = 0; j < out.length; i += 4, j++)
-      out[j] = 0.299 * pixels[i]! + 0.587 * pixels[i + 1]! + 0.114 * pixels[i + 2]!;
-    return out;
-  };
-  const la = luma(a);
-  const lb = luma(b);
+  const [brightnessA, blueA, redA] = planes(a, width * height);
+  const [brightnessB, blueB, redB] = planes(b, width * height);
   let sum = 0;
   let count = 0;
   for (let y = 0; y + 8 <= height; y += 8) {
     for (let x = 0; x + 8 <= width; x += 8) {
-      let meanA = 0;
-      let meanB = 0;
-      for (let row = 0; row < 8; row++)
-        for (let column = 0; column < 8; column++) {
-          const k = (y + row) * width + x + column;
-          meanA += la[k]!;
-          meanB += lb[k]!;
-        }
-      meanA /= 64;
-      meanB /= 64;
-      let varianceA = 0;
-      let varianceB = 0;
-      let covariance = 0;
-      for (let row = 0; row < 8; row++)
-        for (let column = 0; column < 8; column++) {
-          const k = (y + row) * width + x + column;
-          const da = la[k]! - meanA;
-          const db = lb[k]! - meanB;
-          varianceA += da * da;
-          varianceB += db * db;
-          covariance += da * db;
-        }
-      sum +=
-        ((2 * meanA * meanB + C1) * ((2 * covariance) / 63 + C2)) /
-        ((meanA * meanA + meanB * meanB + C1) * ((varianceA + varianceB) / 63 + C2));
+      const brightness = blockSsim(brightnessA!, brightnessB!, width, x, y);
+      const colour =
+        (blockSsim(blueA!, blueB!, width, x, y) + blockSsim(redA!, redB!, width, x, y)) / 2;
+      sum += Math.min(brightness, 0.75 * brightness + 0.25 * colour);
       count++;
     }
   }
@@ -69,8 +89,8 @@ function tileStarts(length: number, tile: number): number[] {
 
 /**
  * How much of the original's look the prepared image keeps, from 0 to 100: the
- * structural similarity (SSIM) of their brightness, compared as they would look full
- * screen on a large display. `reference` is the original at the size the site's rules
+ * structural similarity (SSIM) of their brightness and colour, compared as they would
+ * look full screen on a large display. `reference` is the original at the size the site's rules
  * call for, so resizing those rules require is not counted as a loss; shrinking to meet
  * a file-size limit is. Sampled in tiles across the image, so it costs milliseconds.
  */

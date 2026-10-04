@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   conversionTargets,
@@ -16,6 +18,8 @@ const bytes = (...parts: (string | number[])[]) =>
     ),
   );
 const utf16 = (text: string) => Array.from(text).flatMap((c) => [c.charCodeAt(0), 0]);
+const workbook = (name: string) =>
+  new File([new Uint8Array(readFileSync(join(process.cwd(), 'tests/fixtures', name)))], name);
 
 describe('recognising documents by their content', () => {
   it('knows a PDF, an XLSX workbook, an XLS workbook and a CSV file', () => {
@@ -96,6 +100,29 @@ describe('spreadsheets', () => {
     });
     const back = await prepareSheet(result.file, 'xlsx', parseAccept('.csv'));
     expect(back.kind === 'fixed' && (await back.result.file.text())).toBe('Café\n1');
+  });
+  it('makes the CSV file from the sheet that was chosen', async () => {
+    const file = workbook('two-sheets.xlsx');
+    const csvOnly = parseAccept('.csv');
+    const first = await transformSheet(file, 'xlsx', csvOnly, { outputFormat: 'csv' });
+    expect(await first.file.text()).toBe('Name,Code,Amount\nZoë,00123,1234.5\nArjun,04567,99');
+    const second = await transformSheet(file, 'xlsx', csvOnly, { outputFormat: 'csv', sheet: 1 });
+    expect(await second.file.text()).toBe('Total,1333.5');
+    expect(second.changes).toEqual(['converted', 'one-sheet']);
+    await expect(
+      transformSheet(file, 'xlsx', csvOnly, { outputFormat: 'csv', sheet: 2 }),
+    ).rejects.toThrow('damaged');
+  });
+  it('uses formulas’ saved results, and refuses a sheet whose formulas have none', async () => {
+    const saved = await prepareSheet(workbook('formulas-saved.xlsx'), 'xlsx', parseAccept('.csv'));
+    expect(saved.kind === 'fixed' && (await saved.result.file.text())).toBe(
+      'Item,Price,Qty,Total\nPen,2.5,4,10\nBook,12,2,24\nSum,,,34',
+    );
+    // Written by a script and never opened in a spreadsheet app: a CSV file would hold
+    // empty cells, or the formulas' own text, where the totals should be.
+    await expect(
+      prepareSheet(workbook('formulas-unsaved.xlsx'), 'xlsx', parseAccept('.csv')),
+    ).rejects.toThrow('uncalculated-formulas');
   });
   it('passes a spreadsheet the field already takes, and refuses a damaged workbook', async () => {
     const csv = new File([csvText], 'people.csv', { type: 'text/csv' });

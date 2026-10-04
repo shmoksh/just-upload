@@ -1841,6 +1841,18 @@
   display: grid;
   gap: 10px;
 }
+.lab-sheet {
+  justify-self: start;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  color: var(--ju-ink);
+  background-color: var(--ju-surface);
+  box-shadow: inset 0 0 0 1px var(--ju-line-strong);
+}
 .lab-actions {
   display: flex;
   flex-wrap: wrap;

@@ -141,7 +141,7 @@ async function decodeStreamed(
       height,
       bytes: file.size,
       transparent: streamed.transparent,
-      animated: false,
+      animated: Boolean(streamed.multipleImages),
       orientation: streamed.orientation,
     },
     scale: bitmap.width / width,
@@ -189,6 +189,8 @@ export async function decodeImage(
         fail('too-large-to-process');
       }
       streamed.info.dpi = readDpi(head, format);
+      // An animated PNG is known from its header; a TIFF's pages from reading it.
+      streamed.info.animated ||= format !== 'tiff' && Boolean(header?.animated);
       return streamed;
     } catch (error) {
       if (error instanceof ProcessingError && error.code !== 'failed') throw error;

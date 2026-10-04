@@ -4,9 +4,9 @@
 
 The first public release.
 
-- **Uploads that just work.** When a website refuses what you upload, Just Upload makes a
-  copy it accepts, on your device, in about a second. Files that already fit are never
-  touched.
+- **Fix rejected uploads as you upload.** When a website refuses what you upload, Just
+  Upload makes a copy it accepts, on your device, in about a second. Files that already
+  fit are never touched.
 - **Works with what you upload:** photos, scans, PDFs and spreadsheets, in the format
   each website asks for.
 - **Fits size limits,** at full size whenever it can. If a photo truly needs fewer
@@ -18,7 +18,10 @@ The first public release.
   and a DPI such as "200 DPI": cropped to that shape after asking, sized for the DPI, and
   saved with it.
 - **Never a surprise.** Cropping, a white background, a visible drop in quality or fewer
-  pixels is always your choice, and every note says how much quality was kept.
+  pixels is always your choice, and every note says how much quality was kept, colour
+  included. From a workbook with several sheets, you choose the one to upload.
+- **Fix a file yourself:** when a website never states its rules, type them in from the
+  Just Upload button and save the copy.
 - **Safe by default.** If anything goes wrong, the website gets your original file.
   Problem notes stay on your device until you choose to send one.
 - **Private by design.** No servers, no account, no analytics. Your originals are never

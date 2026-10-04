@@ -1,36 +1,45 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/banner-dark.png">
-    <img alt="Just Upload: uploads that just work." src="docs/images/banner-light.png" width="720">
+    <img alt="Just Upload: fix rejected uploads as you upload." src="docs/images/banner-light.png" width="720">
   </picture>
 </p>
 
 <p align="center">
-  When a website says no to your upload, Just Upload quietly fixes it,<br>
+  “File too large.” “Unsupported format.” Just Upload makes a copy the website accepts,<br>
   privately, on your device, in about a second.
 </p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/welcome-dark.png">
-  <img alt="The Just Upload welcome page: uploads that just work." src="docs/store/screenshots/5-welcome.png">
+  <img alt="The Just Upload welcome page: fix rejected uploads as you upload." src="docs/store/screenshots/5-welcome.png">
 </picture>
 
-## Why Just Upload
+## What it does
 
-"File type not supported." "File too large." Websites are picky about what you upload.
-With Just Upload you pick a file the way you always do: if the website takes it, nothing
-happens; if it doesn't, Just Upload makes a copy that fits before the website sees it.
+You pick a file the way you always do. If the website takes it, nothing happens. If it
+doesn't, Just Upload makes a copy that fits before the website sees it.
 
+- **Wrong format, fixed.** WebP, AVIF, HEIC, TIFF, SVG and more become the format the
+  website takes.
+- **Too large, made to fit.** At full size whenever it can; it asks before using fewer
+  pixels, and keeps as many as fit. Minimum sizes are met too.
+- **The right pixels.** Resized to the size a website states, and cropped only to the
+  crop you choose.
+- **Passport and exam photos.** "3.5 × 4.5 cm, 200 DPI" becomes exactly that.
+- **PDFs and spreadsheets.** A photo becomes a PDF, a PDF becomes a JPG, a big PDF gets
+  smaller, and the Excel sheet you choose becomes CSV, or back.
+- **Reads the rules like you do.** "upto 2MB", "should not exceed 500 KB", "between 20
+  and 50 KB".
+- **Never a surprise.** Anything you'd notice is your choice, every note says how much
+  quality was kept, and your original is never changed.
+- **Fix a file yourself.** When a website never states its rules, type them in and save
+  the copy.
 - **Private by design.** Everything happens in your browser. No servers, no account, no
   tracking.
-- **Works with what you upload.** Photos, scans, PDFs and spreadsheets, in the format
-  each website asks for.
-- **Fits any size limit.** At full size whenever it can; it asks before using fewer
-  pixels, and keeps as many as fit.
-- **Reads the rules like you do.** "upto 2MB", "should not exceed 500 KB", "between 20
-  and 50 KB", "3.5 × 4.5 cm, 200 DPI".
-- **Never a surprise.** Anything you'd notice is your choice, and your original is never
-  changed.
+
+Just Upload reads the rules a website shows. Rules a website never states, and a few
+unusual upload buttons, are out of its reach: that is what "Fix a file yourself" is for.
 
 <table>
   <tr>

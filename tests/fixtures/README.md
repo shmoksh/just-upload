@@ -33,13 +33,15 @@ or rights, and may be redistributed with the project.
 
 ## Documents and spreadsheets
 
-| File                   | Made by                                        | What it tests                                     |
-| ---------------------- | ---------------------------------------------- | ------------------------------------------------- |
-| `scan-a4.pdf` (746 KB) | macOS `sips`, from a grainy photo saved as JPG | A scanned page over a limit, made smaller         |
-| `certificate.pdf`      | written by hand (PDF syntax, Helvetica text)   | A one-page PDF drawn as an image                  |
-| `three-pages.pdf`      | written by hand, like `certificate.pdf`        | Asking before using only the first page           |
-| `two-sheets.xlsx`      | written by hand (the XML parts, zipped)        | Asking which sheet; a code stored as text "00123" |
-| `people.csv`           | written by hand, UTF-8                         | Codes with leading zeros, an accented name        |
+| File                    | Made by                                        | What it tests                                     |
+| ----------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| `scan-a4.pdf` (746 KB)  | macOS `sips`, from a grainy photo saved as JPG | A scanned page over a limit, made smaller         |
+| `certificate.pdf`       | written by hand (PDF syntax, Helvetica text)   | A one-page PDF drawn as an image                  |
+| `three-pages.pdf`       | written by hand, like `certificate.pdf`        | Asking before using only the first page           |
+| `two-sheets.xlsx`       | written by hand (the XML parts, zipped)        | Asking which sheet; a code stored as text "00123" |
+| `people.csv`            | written by hand, UTF-8                         | Codes with leading zeros, an accented name        |
+| `formulas-saved.xlsx`   | written by hand, like `two-sheets.xlsx`        | Formulas with saved results become their values   |
+| `formulas-unsaved.xlsx` | the same formulas with no saved results        | A sheet that is left alone, with a note           |
 
 None was made by pdf-lib, PDF.js or SheetJS, so a test never reads back a file written
 by the code under test.

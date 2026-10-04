@@ -9,7 +9,9 @@ import {
   receiptsFor,
   selectedImage,
   test,
+  type Upload,
 } from './fixtures';
+import { writeTiff } from '../unit/helpers/tiff';
 
 /** The first bytes of the file an input now holds, as text-friendly hex. */
 async function magic(page: Page, selector: string, length = 4): Promise<string> {
@@ -78,6 +80,40 @@ test.describe('every supported format can be read', () => {
     const receipt = await received(site, 'jpeg');
     expect(receipt.files[0]).toMatchObject({ name: 'animated-160x120.jpg', type: 'image/jpeg' });
   });
+
+  /** A scan with two full-size pages, as a TIFF or a BigTIFF. */
+  async function twoPageTiff(big: boolean): Promise<Upload> {
+    const data = Uint8Array.from({ length: 320 * 240 * 3 }, (_, i) => (i * 7) % 251);
+    const scan = writeTiff({
+      width: 320,
+      height: 240,
+      samples: 3,
+      bits: 8,
+      photometric: 2,
+      data,
+      big,
+      secondPage: true,
+    });
+    return {
+      name: 'scan.tif',
+      mimeType: 'image/tiff',
+      buffer: Buffer.from(await scan.arrayBuffer()),
+    };
+  }
+
+  for (const [kind, big] of [
+    ['TIFF', false],
+    ['BigTIFF', true],
+  ] as const) {
+    test(`a two-page ${kind} asks before keeping only its first page`, async ({ site }) => {
+      await site.setInputFiles('#jpeg', await twoPageTiff(big));
+      await expect(dialog(site)).toContainText('This site needs a single image');
+      expect(await receiptsFor(site, 'jpeg')).toHaveLength(0);
+      await dialog(site).getByRole('button', { name: 'Use first frame' }).click();
+      const receipt = await received(site, 'jpeg');
+      expect(receipt.files[0]).toMatchObject({ name: 'scan.jpg', type: 'image/jpeg' });
+    });
+  }
 
   test('an AVIF on an "any image" field is left alone', async ({ site }) => {
     const avif = fixture('photo-640x480.avif', 'image/avif');

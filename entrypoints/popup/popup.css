@@ -129,6 +129,48 @@ body {
   height: 26px;
 }
 
+.manual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 10px 0;
+  padding: 11px 12px 11px 14px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  text-align: left;
+  color: var(--ju-muted);
+  background: var(--ju-surface);
+  box-shadow: 0 0 0 1px var(--ju-line);
+  cursor: pointer;
+  transition: box-shadow 140ms ease;
+}
+.manual:hover {
+  box-shadow: 0 0 0 1px var(--ju-line-strong);
+}
+.manual span {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.manual b {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ju-ink);
+}
+.manual svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--ju-accent);
+  transition: transform 160ms var(--ju-ease-out);
+}
+.manual:hover svg {
+  transform: translateX(2px);
+}
+
 .popup-error {
   margin: 10px 10px 0;
 }

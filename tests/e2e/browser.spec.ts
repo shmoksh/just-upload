@@ -115,7 +115,9 @@ test('the welcome page converts the sample HEIC on the device', async ({
 }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/onboarding.html`);
-  await expect(page.getByRole('heading', { name: 'Uploads that just work.' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Fix rejected uploads as you upload.' }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'HEIC photo' }).click();
   const result = page.locator('.lab-result');
   await expect(result.locator('.lab-done')).toContainText('Ready to upload', { timeout: 20_000 });

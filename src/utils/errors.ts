@@ -13,6 +13,7 @@ export const ERROR_CODES = [
   'needs-animation-consent',
   'target-unreachable',
   'rules-conflict',
+  'uncalculated-formulas',
   'encode-unsupported',
   'timeout',
   'busy',

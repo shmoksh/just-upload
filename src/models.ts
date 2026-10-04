@@ -123,6 +123,8 @@ export interface CropRect {
 export interface TransformOptions {
   outputFormat: FileOutput;
   crop?: CropRect;
+  /** Which sheet of a workbook becomes the CSV file, counted from 0: the first by default. */
+  sheet?: number;
   allowTransparencyLoss?: boolean;
   allowAnimationLoss?: boolean;
   allowUpscale?: boolean;
@@ -138,7 +140,7 @@ export type TransformChange =
   | 'orientation-applied'
   | 'raised-to-minimum'
   | 'first-page'
-  | 'first-sheet'
+  | 'one-sheet'
   | 'dpi-set';
 
 export interface TransformResult {

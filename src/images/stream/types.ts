@@ -13,6 +13,8 @@ export interface StreamedImage {
   color?: ColorDescription;
   /** EXIF orientation, 1–8, still to be applied. */
   orientation: number;
+  /** The file holds further full-size images: a TIFF's other pages. */
+  multipleImages?: boolean;
 }
 
 /** Picks the working size for an image of the given full size. */

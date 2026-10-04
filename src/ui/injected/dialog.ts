@@ -10,6 +10,8 @@ export interface ConfirmRequest {
   requirements: UploadRequirements;
   /** What the change looks like; a PDF made smaller has no picture to show. */
   preview?: Blob;
+  /** For a workbook: a picture of each sheet in `info.sheets`, to choose between. */
+  previews?: Blob[];
   /** Declining removes the file instead of keeping it (see picker widening). */
   removeOnDecline: boolean;
   /** For a quality question: the share of the original's look the prepared file keeps. */
@@ -19,6 +21,8 @@ export interface ConfirmRequest {
 }
 export interface ConfirmAnswer {
   crop?: CropRect;
+  /** The sheet chosen from a workbook, counted from 0. */
+  sheet?: number;
 }
 
 let closeOpenDialog: (() => void) | undefined;
@@ -86,6 +90,36 @@ export async function confirmChange(
       ? createCropEditor({ preview, width: info.width, height: info.height, ratio, fill })
       : undefined;
 
+  const stage =
+    editor?.element ?? (preview && createPreview(preview, { fill, label: 'Your image' }));
+  // A workbook's sheets, to choose which one becomes the file.
+  const sheets = decision.consents.includes('sheet') ? (info.sheets ?? []) : [];
+  const picker =
+    sheets.length > 1
+      ? h(
+          'select',
+          { class: 'ju-select', 'aria-label': 'Sheet to use' },
+          ...sheets.map((name) => h('option', {}, name)),
+        )
+      : undefined;
+  picker?.addEventListener('change', () => {
+    const chosen = picker.selectedIndex;
+    const canvas = stage?.querySelector('canvas');
+    const picture = request.previews?.[chosen];
+    if (!canvas || !picture) return;
+    void createImageBitmap(picture)
+      .then((bitmap) => {
+        // Still the chosen sheet, now that its picture has loaded.
+        if (picker.selectedIndex === chosen) {
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
+        }
+        bitmap.close();
+      })
+      .catch(() => {});
+  });
+
   const primary = h('button', { type: 'button', class: 'ju-button primary' }, copy.confirm);
   const secondary = h('button', { type: 'button', class: 'ju-button' }, copy.decline);
   const close = h(
@@ -100,7 +134,8 @@ export async function confirmChange(
     h('p', { class: 'ju-dialog-brand' }, logo(), 'Just Upload'),
     h('h2', { id: 'ju-title' }, copy.title),
     h('p', { id: 'ju-body' }, copy.body),
-    editor?.element ?? (preview && createPreview(preview, { fill, label: 'Your image' })),
+    picker,
+    stage,
     request.quality !== undefined &&
       (decision.consents.includes('quality') || decision.consents.includes('shrink')) &&
       qualityScale(request.quality),
@@ -137,7 +172,11 @@ export async function confirmChange(
         resolve(answer);
       }
     };
-    const confirm = () => finish(editor ? { crop: editor.value() } : {});
+    const confirm = () =>
+      finish({
+        ...(editor && { crop: editor.value() }),
+        ...(picker && { sheet: picker.selectedIndex }),
+      });
     const abort = () => finish(null);
     closeOpenDialog = abort;
     signal.addEventListener('abort', abort, { once: true });
@@ -155,7 +194,8 @@ export async function confirmChange(
       if (
         event.key === 'Enter' &&
         !(target instanceof HTMLButtonElement) &&
-        !(target instanceof HTMLInputElement)
+        !(target instanceof HTMLInputElement) &&
+        !(target instanceof HTMLSelectElement)
       ) {
         event.preventDefault();
         confirm();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compressToTarget, QUALITY, type Encoder } from '../../src/images/compress';
+import { compressToTarget, finestThatFits, QUALITY, type Encoder } from '../../src/images/compress';
 import { calculateDimensions, normalizeCrop, outputFilename } from '../../src/images/geometry';
 import { detectFormat, displaySize, parseHeader } from '../../src/images/headers';
 import { isCompatibleByHeader } from '../../src/images/quick-check';
@@ -338,6 +338,22 @@ describe('fewer pixels, when no quality fits at full size (asked about first)', 
   });
 });
 
+describe('a finer save, where the usual quality shows', () => {
+  // A stand-in encoder: the file grows with quality, from 400 KB at 0.92 to 1 MB at 1.
+  const encode = async (quality: number) =>
+    new Blob([new Uint8Array(Math.round(400_000 + ((quality - 0.92) / 0.08) * 600_000))]);
+
+  it('finds the finest quality above the usual one that fits the limit', async () => {
+    const found = await finestThatFits(encode, 800_000);
+    // 0.96 fits (700 KB), 0.98 does not (850 KB), 0.97 does (775 KB).
+    expect(found?.quality).toBeCloseTo(0.97, 5);
+    expect(found?.blob.size).toBeLessThanOrEqual(800_000);
+  });
+  it('finds nothing when even a little finer does not fit', async () => {
+    expect(await finestThatFits(encode, 450_000)).toBeUndefined();
+  });
+});
+
 describe('quality score', () => {
   const gradient = (width: number, height: number, noise = 0) => {
     const pixels = new Uint8ClampedArray(width * height * 4);
@@ -361,5 +377,36 @@ describe('quality score', () => {
     };
     expect(score(1)).toBeLessThan(1);
     expect(score(3)).toBeLessThan(score(1));
+  });
+  it('counts colour: stripes smeared into one flat colour are a loss, though as bright', () => {
+    // Red and blue of the same brightness (0.299 R + 0.587 G + 0.114 B ≈ 60), in stripes
+    // two pixels wide; smeared, they are one flat purple of that brightness.
+    const stripes = (smeared: boolean) => {
+      const pixels = new Uint8ClampedArray(64 * 64 * 4);
+      for (let i = 0; i < 64 * 64; i++) {
+        const red = smeared ? 0.5 : (i % 64) % 4 < 2 ? 1 : 0;
+        pixels.set([200 * red, 52 * (1 - red), 255 * (1 - red), 255], i * 4);
+      }
+      return pixels;
+    };
+    const { sum, count } = blockSimilarity(stripes(false), stripes(true), 64, 64);
+    expect(sum / count).toBeLessThan(0.9);
+    const same = blockSimilarity(stripes(false), stripes(false), 64, 64);
+    expect(same.sum / same.count).toBeCloseTo(1, 6);
+  });
+  it('never lets unchanged colour raise a score above what brightness kept', () => {
+    // A grey checkerboard flattened to its average: SSIM is C2 / (variance + C2), and the
+    // colour channels, identical in both, must not pull that up.
+    const board = new Uint8ClampedArray(8 * 8 * 4);
+    const flat = new Uint8ClampedArray(8 * 8 * 4);
+    for (let i = 0; i < 64; i++) {
+      const value = 128 + ((i + (i >> 3)) % 2 ? 20 : -20);
+      board.set([value, value, value, 255], i * 4);
+      flat.set([128, 128, 128, 255], i * 4);
+    }
+    const { sum, count } = blockSimilarity(board, flat, 8, 8);
+    expect(count).toBe(1);
+    const c2 = (0.03 * 255) ** 2;
+    expect(sum).toBeCloseTo(c2 / ((64 * 400) / 63 + c2), 4);
   });
 });

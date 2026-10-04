@@ -1,7 +1,15 @@
 Just Upload bundles the following third-party software. Each license text follows.
-The HEIC decoder (libheif-js, containing libheif and libde265) is licensed under the
-GNU LGPL v3. It ships unmodified as vendor/libheif.mjs and can be replaced; source
-code and replacement instructions are in the project repository (docs/heic-licensing.md).
+
+The HEIC decoder (libheif-js, containing libheif and libde265) is free software under
+the GNU Lesser General Public License, version 3. Copies of that license and of the GNU
+General Public License are below. It ships unmodified, as the separate file
+vendor/libheif.mjs. You may modify it, replace it in your copy of the extension with a
+modified version that keeps the same interface, and reverse engineer the extension to
+debug such modifications. Its exact source code, and how to replace it:
+  https://github.com/shmoksh/just-upload/tree/main/docs/decoder-source
+  https://github.com/shmoksh/just-upload/blob/main/docs/heic-licensing.md
+libheif: Copyright (c) 2017-2025 Dirk Farin and contributors, including struktur AG.
+libde265: Copyright (c) 2013-2014 struktur AG, Dirk Farin.
 
 ==============================================================================
 react 19.3.0 (MIT)

@@ -254,6 +254,36 @@ test.describe('automatic fixes', () => {
   });
 });
 
+test.describe('a conversion keeps the look, or it asks', () => {
+  // Small red text on blue: JPEG's usual quality smears the colour, its highest does not.
+  const screen = { width: 1200, height: 800, detail: 'coloured-text' } as const;
+
+  test('coloured text is saved at the highest quality when the usual one shows', async ({
+    site,
+  }) => {
+    const png = await makeImage(site, 'screen.png', { ...screen, type: 'image/png' });
+    await site.setInputFiles('#jpeg', png);
+    const receipt = await received(site, 'jpeg');
+    expect(receipt.files[0]).toMatchObject({ name: 'screen.jpg', type: 'image/jpeg' });
+    await expect(toast(site)).toContainText(/Quality kept: (9[7-9]|100)%/);
+  });
+
+  test('when the site’s size limit leaves no room for that, it asks first', async ({ site }) => {
+    const webp = await makeImage(site, 'screen.webp', {
+      ...screen,
+      type: 'image/webp',
+      quality: 1,
+    });
+    await site.setInputFiles('#form-image', webp);
+    await expect(dialog(site)).toContainText('Some quality would be lost');
+    expect(await approveQuality(site)).toBeLessThan(97);
+    await expect
+      .poll(async () => (await selectedImage(site, '#form-image')).name)
+      .toBe('screen.jpg');
+    expect((await selectedImage(site, '#form-image')).size).toBeLessThanOrEqual(1_000_000);
+  });
+});
+
 test.describe('changes that need a person to decide', () => {
   test('a photo no quality can fit at full size asks first, then keeps as many pixels as fit', async ({
     site,

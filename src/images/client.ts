@@ -156,7 +156,14 @@ export const extensionProcessor: Processor = {
     if (frame) return viaFrame<PrepareOutcome>(frame, 'prepare', file, extra, signal, progress);
     const value = await viaMessages<SerializedPrepare>('prepare', file, extra, signal);
     if (value.kind === 'fixed') return { kind: 'fixed', result: fromMessage(value.result) };
-    if (value.kind === 'confirm') return { ...value, preview: deserializeFile(value.preview) };
+    if (value.kind === 'confirm') {
+      const { previews, ...rest } = value;
+      return {
+        ...rest,
+        preview: deserializeFile(value.preview),
+        ...(previews && { previews: previews.map((file) => deserializeFile(file)) }),
+      };
+    }
     return value;
   },
   async transform(file, requirements, options, signal, progress) {

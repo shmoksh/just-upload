@@ -288,6 +288,7 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
         info: question.info,
         requirements,
         preview: question.preview,
+        previews: question.previews,
         removeOnDecline: Boolean(session.unlocked),
       },
       signal,
@@ -298,7 +299,7 @@ export function installInterceptor(deps: InterceptorDeps): () => void {
       return { file };
     }
     notice.start();
-    const options = transformOptions(question.decision, answer.crop);
+    const options = transformOptions(question.decision, answer.crop, answer.sheet);
     const result = await deps.processor.transform(file, requirements, options, signal, (fraction) =>
       deps.ui.progress?.(session.original.length, fraction, nounFor(session.original)),
     );

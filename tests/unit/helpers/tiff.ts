@@ -1,4 +1,4 @@
-import { deflate } from 'pako';
+import pako from 'pako';
 
 /**
  * TIFF's LZW: most-significant bit first, 9–12-bit codes. The decoder's table lags the
@@ -93,6 +93,8 @@ export interface TiffSpec {
   icc?: Uint8Array;
   /** Put a reduced-resolution 1 × 1 preview before the real image. */
   previewFirst?: boolean;
+  /** Add a second full-size page (showing the same pixels) after the first. */
+  secondPage?: boolean;
 }
 
 /**
@@ -156,7 +158,7 @@ export function writeTiff(spec: TiffSpec): Blob {
       }
     }
     if (spec.compression === 5) return lzwEncode(out);
-    if (spec.compression === 8) return deflate(out);
+    if (spec.compression === 8) return pako.deflate(out);
     if (spec.compression === 32773) return packBits(out);
     return out;
   };
@@ -241,6 +243,13 @@ export function writeTiff(spec: TiffSpec): Blob {
   if (spec.orientation) entries.push([274, 3, [spec.orientation]]);
   if (spec.icc) entries.push([34675, 7, spec.icc]);
 
+  // The second page's directory is stored before the first page's, which points on to it.
+  let secondOffset = 0;
+  if (spec.secondPage) {
+    secondOffset = position;
+    parts.push(directory(entries, 0));
+  }
+
   let first: Uint8Array | undefined;
   let firstOffset = position;
   if (spec.previewFirst) {
@@ -264,7 +273,7 @@ export function writeTiff(spec: TiffSpec): Blob {
     first = directory(previewEntries, position + size);
   }
   const mainOffset = position;
-  const main = directory(entries, 0);
+  const main = directory(entries, secondOffset);
   const header = big
     ? [
         ...(little ? [0x49, 0x49] : [0x4d, 0x4d]),

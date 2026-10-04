@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Uploads that just work. When a website says no to your upload, Just Upload quietly fixes it, privately, on your device.",
+  "description": "Fix rejected uploads as you upload. Converts, compresses, resizes and crops files to fit each website's rules, on your device.",
   "license": "UNLICENSED",
   "packageManager": "pnpm@10.12.4",
   "engines": {

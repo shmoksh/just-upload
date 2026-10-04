@@ -399,6 +399,17 @@ export async function decodeTiffStream(
     offset = candidate.next;
   }
   if (!directory) fail('damaged');
+  // A further full-size image is another page; previews and transparency masks are not.
+  let multipleImages = false;
+  try {
+    for (let next = directory.next, guard = 0; next && !multipleImages && guard < 64; guard++) {
+      const following = await readDirectory(file, next, little, big);
+      multipleImages = !((following.values.get(TAG.newSubfileType)?.[0] ?? 0) & 0b101);
+      next = following.next;
+    }
+  } catch {
+    // A pointer to nothing readable: there is no further page to lose.
+  }
   const get = (tag: number, fallback?: number) => directory.values.get(tag)?.[0] ?? fallback;
   const width = get(TAG.width)!;
   const height = get(TAG.height)!;
@@ -576,5 +587,6 @@ export async function decodeTiffStream(
     fullHeight: height,
     color,
     orientation: orientation >= 1 && orientation <= 8 ? orientation : 1,
+    multipleImages,
   };
 }

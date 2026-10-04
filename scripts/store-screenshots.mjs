@@ -157,7 +157,7 @@ try {
       <div style="display:grid;justify-items:center;gap:12px;text-align:center">
         <div style="width:76px;height:76px">${logo.replace('<svg ', '<svg width="76" height="76" ')}</div>
         <div style="font:400 48px/1 Serif;letter-spacing:-0.02em">Just Upload</div>
-        <div style="font-size:17px;color:#5c6660">Uploads that just work.</div>
+        <div style="font-size:17px;color:#5c6660">Fix rejected uploads as you upload.</div>
       </div>
     </body>`);
   await tile.evaluate(() => document.fonts.ready);
@@ -203,8 +203,8 @@ try {
         </style>
         <body><div>
           <div class="lockup">${logo.replace('<svg ', '<svg width="88" height="88" ')}<span class="name">Just Upload</span></div>
-          <p class="line">Uploads that <em>just work.</em></p>
-          <p class="facts">Private by design · Free · Works on any website</p>
+          <p class="line">Fix rejected uploads <em>as you upload.</em></p>
+          <p class="facts">Private by design · Free · No account</p>
         </div></body>`);
       await banner.evaluate(() => document.fonts.ready);
       await banner.screenshot({ path: `${images}/banner-${theme}.png` });

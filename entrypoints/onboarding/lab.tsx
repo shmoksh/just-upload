@@ -1,6 +1,7 @@
 import { AnimatePresence, m } from 'framer-motion';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
+import { guessFormat } from '../../src/compatibility';
 import {
   consentFor,
   DEFAULT_PREFERENCES,
@@ -10,11 +11,11 @@ import {
 } from '../../src/decision';
 import { extensionProcessor } from '../../src/images/client';
 import { parseHeader } from '../../src/images/headers';
+import { isImage } from '../../src/formats';
 import type {
   Decision,
   FileFormat,
   FileOutput,
-  ImageFormat,
   TransformResult,
   UploadRequirements,
 } from '../../src/models';
@@ -24,9 +25,10 @@ import { FileTag, Icon } from '../../src/ui/shared';
 import { errorCode } from '../../src/utils/errors';
 import { formatBytes } from '../../src/utils/files';
 
-// "Try it with your own image": the real engine, on this page. Type a rule the way a
-// website words it, drop in an image, and see exactly what the website would get, pixel
-// dimensions included. Nothing leaves the computer.
+// "Try it with your own file": the real engine, on this page. Type a rule the way a
+// website words it, drop in a file, and see exactly what the website would get, pixel
+// dimensions included, then save it. It is also where the popup's "Fix a file yourself"
+// leads, for websites that never state their rules. Nothing leaves the computer.
 
 const PRESETS = [
   'JPG or PNG · Maximum 2 MB',
@@ -35,6 +37,8 @@ const PRESETS = [
   'WebP only',
   'Square photo, 600 × 600 pixels',
   'Passport photo 3.5 cm × 4.5 cm, 200 DPI',
+  'PDF only, max 200 KB',
+  'CSV files only',
 ];
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -53,7 +57,7 @@ const SAMPLES = [
 
 interface Original {
   file: File;
-  format: ImageFormat;
+  format: FileFormat;
   width?: number;
   height?: number;
   url?: string;
@@ -69,16 +73,18 @@ type State =
       title: string;
       body: string;
       confirm: string;
-      run: () => void;
+      run: (sheet?: number) => void;
       /** What the website would get, if the person agrees, and a picture of it. */
       candidate?: TransformResult;
       preview: string;
+      /** For a workbook: its sheets and a picture of each, to choose between. */
+      sheets?: { names: string[]; previews: Blob[] };
     }
   | { kind: 'done'; result: TransformResult; url: string; ms: number }
   | { kind: 'failed'; message: string };
 
 /** Formats the browser can show as a picture; a HEIC is shown from its prepared copy. */
-const SHOWABLE = new Set<ImageFormat>(['jpeg', 'png', 'webp', 'gif', 'avif', 'bmp', 'svg', 'ico']);
+const SHOWABLE = new Set<FileFormat>(['jpeg', 'png', 'webp', 'gif', 'avif', 'bmp', 'svg', 'ico']);
 
 async function inspect(file: File): Promise<Original> {
   const head = new Uint8Array(await file.slice(0, 1024 * 1024).arrayBuffer());
@@ -88,7 +94,8 @@ async function inspect(file: File): Promise<Original> {
   } catch {
     header = undefined;
   }
-  const format = header?.format ?? 'unknown';
+  // Not an image: a PDF or a spreadsheet is known by its name and type.
+  const format = header?.format ?? guessFormat(file);
   return {
     file,
     format,
@@ -106,11 +113,13 @@ function failure(error: unknown): string {
   if (code === 'rules-conflict')
     return 'Those rules contradict each other, so nothing would be changed.';
   if (code === 'too-large-to-process')
-    return 'This image is too large to prepare at its full size, so the website would get it unchanged.';
+    return 'This file is too large to prepare at its full size, so the website would get it unchanged.';
   if (code === 'damaged' || code === 'unsupported-format')
-    return 'This file couldn’t be read as an image, so the website would get it unchanged.';
+    return 'This file couldn’t be read, so the website would get it unchanged.';
   if (code === 'target-unreachable')
     return 'It can’t get under that limit, even with fewer pixels, so the website would get your original.';
+  if (code === 'uncalculated-formulas')
+    return 'This sheet’s formulas have no saved results. Open the workbook in Excel or Google Sheets, save it, then choose it again.';
   return 'This one couldn’t be prepared, so the website would get your original.';
 }
 
@@ -119,6 +128,8 @@ export function Lab() {
   const [original, setOriginal] = useState<Original | undefined>();
   const [state, setState] = useState<State>({ kind: 'empty' });
   const [dragging, setDragging] = useState(false);
+  const [sheet, setSheet] = useState(0);
+  const [sheetUrl, setSheetUrl] = useState<string>();
   const input = useRef<HTMLInputElement>(null);
   const controller = useRef<AbortController | null>(null);
   const requirements: UploadRequirements = useMemo(() => parseText(rule), [rule]);
@@ -133,6 +144,15 @@ export function Lab() {
     },
     [state],
   );
+
+  // The picture of the sheet chosen from a workbook.
+  const chosenSheet = state.kind === 'ask' ? state.sheets?.previews[sheet] : undefined;
+  useEffect(() => {
+    if (!chosenSheet) return setSheetUrl(undefined);
+    const url = URL.createObjectURL(chosenSheet);
+    setSheetUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [chosenSheet]);
 
   // Whenever the photo or the rule changes, prepare it again (after typing pauses).
   useEffect(() => {
@@ -163,7 +183,12 @@ export function Lab() {
       const consent = consentFor(result, DEFAULT_PREFERENCES);
       if (!consent) return finish(result);
       const copy = dialogCopy(
-        { action: 'USER_CONFIRMATION', issues: [], consents: [consent] },
+        {
+          action: 'USER_CONFIRMATION',
+          issues: [],
+          outputFormat: result.finalFormat,
+          consents: [consent],
+        },
         rules,
         false,
         result.qualityKept,
@@ -186,7 +211,7 @@ export function Lab() {
         run: () => finish(result),
       });
     };
-    const apply = async (decision: Decision) => {
+    const apply = async (decision: Decision, chosen?: number) => {
       const ratio = targetRatio(rules);
       const crop =
         decision.consents.includes('crop') && ratio && photo.width && photo.height
@@ -198,7 +223,7 @@ export function Lab() {
           await extensionProcessor.transform(
             photo.file,
             rules,
-            transformOptions(decision, crop),
+            transformOptions(decision, crop, chosen),
             current.signal,
           ),
         );
@@ -213,14 +238,18 @@ export function Lab() {
       if (outcome.kind === 'unsafe')
         return setState({ kind: 'failed', message: failure(outcome.code) });
       if (outcome.kind === 'confirm') {
-        const copy = dialogCopy(outcome.decision, rules, false);
+        const copy = dialogCopy(outcome.decision, rules, false, undefined, outcome.info);
+        const { sheets } = outcome.info;
+        setSheet(0);
         return setState({
           kind: 'ask',
           title: copy.title,
           body: [copy.body, ...copy.notes].join(' '),
           confirm: copy.confirm,
           preview: URL.createObjectURL(outcome.preview),
-          run: () => void apply(outcome.decision),
+          ...(sheets &&
+            outcome.previews && { sheets: { names: sheets, previews: outcome.previews } }),
+          run: (chosen) => void apply(outcome.decision, chosen),
         });
       }
       review(outcome.result);
@@ -243,7 +272,13 @@ export function Lab() {
   const result =
     state.kind === 'done' ? state.result : state.kind === 'ask' ? state.candidate : undefined;
   const picture =
-    state.kind === 'done' ? state.url : state.kind === 'ask' ? state.preview : undefined;
+    state.kind === 'done'
+      ? isImage(state.result.finalFormat)
+        ? state.url
+        : undefined
+      : state.kind === 'ask'
+        ? (sheetUrl ?? state.preview)
+        : undefined;
   const untouched = state.kind === 'pass' || state.kind === 'kept';
   const sameSize =
     result &&
@@ -297,11 +332,11 @@ export function Lab() {
         >
           <Icon name="upload" size={22} />
           <p>
-            <b>Drop an image here</b>
-            <span>Any format, any size. It stays on this computer.</span>
+            <b>Drop a file here</b>
+            <span>A photo, scan, PDF or spreadsheet. It stays on this computer.</span>
           </p>
           <button type="button" className="button" onClick={() => input.current?.click()}>
-            Choose an image
+            Choose a file
           </button>
           <div className="lab-samples" role="group" aria-label="Samples">
             <span>Or try a sample:</span>
@@ -319,7 +354,7 @@ export function Lab() {
           <input
             ref={input}
             type="file"
-            accept="image/*,.heic,.heif,.jxl"
+            accept="image/*,.heic,.heif,.jxl,.pdf,.csv,.xlsx,.xls"
             hidden
             onChange={(event) => {
               void choose(event.target.files?.[0]);
@@ -332,7 +367,7 @@ export function Lab() {
       <div className="lab-result" aria-live="polite">
         <div className="compare-head">
           <span />
-          <span>Your image</span>
+          <span>Your file</span>
           <span>What the website gets</span>
         </div>
         <div className="compare-thumbs">
@@ -377,18 +412,21 @@ export function Lab() {
             result ? (
               <span className="pixels-after">
                 <span className="num">{pixels(result.finalWidth, result.finalHeight)}</span>
-                <span className={sameSize ? 'badge ok' : 'badge'}>
-                  {sameSize
-                    ? 'Full size kept'
-                    : result.resizedToFit
-                      ? 'Fewer, to fit the limit'
-                      : 'As the website asks'}
-                </span>
+                {/* A spreadsheet has no pixels to keep. */}
+                {result.finalWidth > 0 && (
+                  <span className={sameSize ? 'badge ok' : 'badge'}>
+                    {sameSize
+                      ? 'Full size kept'
+                      : result.resizedToFit
+                        ? 'Fewer, to fit the limit'
+                        : 'As the website asks'}
+                  </span>
+                )}
               </span>
             ) : untouched && original ? (
               <span className="pixels-after">
                 <span className="num">{pixels(original.width, original.height)}</span>
-                <span className="badge ok">Full size kept</span>
+                {original.width && <span className="badge ok">Full size kept</span>}
               </span>
             ) : undefined
           }
@@ -417,12 +455,12 @@ export function Lab() {
             transition={{ duration: 0.22, ease: EASE }}
           >
             {state.kind === 'empty' && (
-              <p className="muted">Choose an image to see what the website would get.</p>
+              <p className="muted">Choose a file to see what the website would get.</p>
             )}
             {state.kind === 'working' && <p className="muted">Preparing, on this computer…</p>}
             {state.kind === 'pass' && (
               <p>
-                <b>Already fits.</b> The website gets your image exactly as it is: Just Upload does
+                <b>Already fits.</b> The website gets your file exactly as it is: Just Upload does
                 nothing.
               </p>
             )}
@@ -437,8 +475,22 @@ export function Lab() {
                 <p>
                   <b>{state.title}.</b> {state.body}
                 </p>
+                {state.sheets && (
+                  <select
+                    className="lab-sheet"
+                    aria-label="Sheet to use"
+                    value={sheet}
+                    onChange={(event) => setSheet(Number(event.target.value))}
+                  >
+                    {state.sheets.names.map((name, index) => (
+                      <option key={index} value={index}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <div className="lab-actions">
-                  <button type="button" className="button" onClick={state.run}>
+                  <button type="button" className="button" onClick={() => state.run(sheet)}>
                     {state.confirm}
                   </button>
                   <button

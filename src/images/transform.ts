@@ -8,11 +8,11 @@ import type {
   UploadRequirements,
 } from '../models';
 import { evaluateCompatibility, safeMinimum } from '../compatibility';
-import { decide, statesPixelSize, transformOptions } from '../decision';
+import { decide, LOOKS_THE_SAME, statesPixelSize, transformOptions } from '../decision';
 import { carriesDpi, isLossy, isOutputFormat, keepsTransparency, mimeOf } from '../formats';
 import { fail, type ErrorCode } from '../utils/errors';
 import { ICO_MAX_SIZE } from './codecs/ico';
-import { compressToTarget, QUALITY } from './compress';
+import { compressToTarget, finestThatFits, QUALITY } from './compress';
 import { context2d, decodeImage, type DecodedImage } from './decode';
 import { readDpi, withDpi } from './dpi';
 import { encodeCanvas } from './encode';
@@ -166,7 +166,7 @@ export async function transformDecoded(
     // as few fewer as fit, and then the person is asked before the file is used (see
     // needsShrinkConsent). An exact size is the website's own and never shrinks.
     const exact = Boolean(rules.exactWidth || rules.exactHeight);
-    const encoded = await compressToTarget(
+    let encoded = await compressToTarget(
       {
         ...target,
         format: outputFormat,
@@ -182,25 +182,60 @@ export async function transformDecoded(
         encodeCanvas(await render(width, height), outputFormat, quality),
     );
 
+    const resizedToFit = encoded.width < size.width || encoded.height < size.height;
+    let sizeLimited = resizedToFit || (isLossy(outputFormat) && encoded.quality < QUALITY.max);
+    // A lossless file holds exactly the pixels drawn, so those are compared; a GIF's
+    // palette and lossy formats are compared as the browser decodes the file.
+    const lossless = !isLossy(outputFormat) && outputFormat !== 'gif';
+    const reference = { source, width: size.width, height: size.height };
+    let quality =
+      lossless && !resizedToFit
+        ? 100
+        : await qualityKept(
+            reference,
+            lossless ? await render(encoded.width, encoded.height) : encoded.blob,
+          );
+    // A conversion that does not look the same at the usual quality (film grain, fine
+    // coloured text) is saved finer, as far as the site's size limit allows. When that
+    // limit is what stands between it and a copy that looks the same, the person is asked
+    // (see needsQualityConsent). A format that cannot do better at any size is left as it
+    // is: there is nothing to offer instead.
+    if (
+      isLossy(outputFormat) &&
+      !sizeLimited &&
+      rules.minBytes === undefined &&
+      quality < LOOKS_THE_SAME
+    ) {
+      const { width, height } = encoded;
+      const encodeAt = async (level: number) =>
+        encodeCanvas(await render(width, height), outputFormat, level);
+      const highest = await encodeAt(QUALITY.highest);
+      const most = await qualityKept(reference, highest);
+      if (most > quality) {
+        const limit =
+          rules.maxBytes === undefined ? Infinity : Math.floor(rules.maxBytes * QUALITY.margin);
+        if (highest.size <= limit) {
+          encoded = { ...encoded, blob: highest, quality: QUALITY.highest };
+          quality = most;
+        } else {
+          // Each AVIF encode takes seconds, not milliseconds.
+          const finer = await finestThatFits(encodeAt, limit, outputFormat === 'avif' ? 1 : 3);
+          const kept = finer ? await qualityKept(reference, finer.blob) : 0;
+          if (finer && kept > quality) {
+            encoded = { ...encoded, ...finer };
+            quality = kept;
+          }
+          sizeLimited = most >= LOOKS_THE_SAME;
+        }
+      }
+    }
+
     // The DPI the site asks for goes in the file's header; the pixels are already final.
     const dpi = rules.dpi && carriesDpi(outputFormat) ? rules.dpi : undefined;
     const blob =
       dpi && carriesDpi(outputFormat)
         ? await withDpi(encoded.blob, outputFormat, dpi)
         : encoded.blob;
-
-    const resizedToFit = encoded.width < size.width || encoded.height < size.height;
-    const sizeLimited = resizedToFit || (isLossy(outputFormat) && encoded.quality < QUALITY.max);
-    // A lossless file holds exactly the pixels drawn, so those are compared; a GIF's
-    // palette and lossy formats are compared as the browser decodes the file.
-    const lossless = !isLossy(outputFormat) && outputFormat !== 'gif';
-    const quality =
-      lossless && !resizedToFit
-        ? 100
-        : await qualityKept(
-            { source, width: size.width, height: size.height },
-            lossless ? await render(encoded.width, encoded.height) : encoded.blob,
-          );
 
     const changes: TransformChange[] = [];
     if (info.format !== outputFormat) changes.push('converted');
@@ -260,7 +295,14 @@ export async function transformImage(
 export type PrepareOutcome =
   | { kind: 'pass' }
   | { kind: 'fixed'; result: TransformResult }
-  | { kind: 'confirm'; decision: Decision; info: ImageInfo; preview: Blob }
+  | {
+      kind: 'confirm';
+      decision: Decision;
+      info: ImageInfo;
+      preview: Blob;
+      /** For a workbook: a picture of each sheet in `info.sheets`, to choose between. */
+      previews?: Blob[];
+    }
   | { kind: 'unsafe'; code: ErrorCode };
 
 /**

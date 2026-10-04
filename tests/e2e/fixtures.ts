@@ -17,9 +17,10 @@ export interface ImageOptions {
   quality?: number;
   /**
    * "photo" has heavy grain, so encoded files are large and squeezing them shows;
-   * "texture" has the light grain of a typical phone photo.
+   * "texture" has the light grain of a typical phone photo; "coloured-text" is a screen
+   * of small red text on blue, which JPEG smears at its usual quality.
    */
-  detail?: 'smooth' | 'texture' | 'photo';
+  detail?: 'smooth' | 'texture' | 'photo' | 'coloured-text';
   transparent?: boolean;
 }
 
@@ -86,6 +87,18 @@ export async function makeImage(page: Page, name: string, options: ImageOptions)
         image.data[i + 2]! += grain;
       }
       c.putImageData(image, 0, 0);
+    }
+    if (o.detail === 'coloured-text') {
+      c.fillStyle = '#1040c0';
+      c.fillRect(0, 0, o.width, o.height);
+      c.fillStyle = '#ff2020';
+      c.font = '22px system-ui, sans-serif';
+      for (let y = 30; y < o.height; y += 26)
+        c.fillText(
+          'Red text on blue: the quick brown fox jumps over the lazy dog 0123456789',
+          20,
+          y,
+        );
     }
     if (o.transparent) c.clearRect(0, 0, o.width / 3, o.height);
     const blob = await canvas.convertToBlob({ type: o.type, quality: o.quality ?? 0.92 });

@@ -181,11 +181,16 @@ export function decide(info: ImageInfo, requirements: UploadRequirements): Decis
  * a file-size limit is always attempted; whether the result is good enough to use
  * without asking is decided afterwards, from what it actually looks like.
  */
-export function transformOptions(decision: Decision, crop?: CropRect): TransformOptions {
+export function transformOptions(
+  decision: Decision,
+  crop?: CropRect,
+  sheet?: number,
+): TransformOptions {
   const consented = (consent: Consent) => decision.consents.includes(consent);
   return {
     outputFormat: decision.outputFormat ?? 'jpeg',
     ...(crop ? { crop } : {}),
+    ...(sheet ? { sheet } : {}),
     allowTransparencyLoss: consented('transparency'),
     allowAnimationLoss: consented('animation'),
     allowUpscale: true,
@@ -195,8 +200,9 @@ export function transformOptions(decision: Decision, crop?: CropRect): Transform
 /**
  * Whether a prepared file needs the person's OK before the site gets it: meeting the
  * site's file-size limit made it look visibly worse than the original. A conversion the
- * limit did not squeeze is already as good as the required format allows, so there is
- * nothing better to offer.
+ * limit did not squeeze is already as good as the required format allows (the transform
+ * saves it at the format's highest quality when the usual one shows), so there is nothing
+ * better to offer.
  */
 export function needsQualityConsent(
   result: Pick<TransformResult, 'qualityKept' | 'sizeLimited'>,

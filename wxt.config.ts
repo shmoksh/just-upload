@@ -19,7 +19,7 @@ export default defineConfig({
   manifest: {
     name: 'Just Upload',
     description:
-      'Uploads that just work. When a website says no to your upload, Just Upload quietly fixes it, privately, on your device.',
+      "Fix rejected uploads as you upload. Converts, compresses, resizes and crops files to fit each website's rules, on your device.",
     minimum_chrome_version: '116',
     permissions: ['storage', 'offscreen', 'activeTab'],
     icons: { 16: '/icons/16.png', 32: '/icons/32.png', 48: '/icons/48.png', 128: '/icons/128.png' },

@@ -203,6 +203,20 @@ function Popup() {
 
       <RatePrompt fixes={stats.total} />
 
+      <button
+        type="button"
+        className="manual"
+        onClick={() =>
+          void browser.tabs.create({ url: browser.runtime.getURL('/onboarding.html#try') })
+        }
+      >
+        <span>
+          <b>Fix a file yourself</b>
+          For when a website doesn’t state its rules
+        </span>
+        <Icon name="arrow" />
+      </button>
+
       <footer className="popup-foot">
         <LocalNote />
         <button

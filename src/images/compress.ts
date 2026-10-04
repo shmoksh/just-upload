@@ -34,7 +34,10 @@ export type Encoder = (width: number, height: number, quality: number) => Promis
 
 export const QUALITY = Object.freeze({
   max: 0.92,
-  /** Used only to bring a small file up to a site's minimum size. */
+  /**
+   * Used to bring a small file up to a site's minimum size, and for a conversion that
+   * the usual quality visibly hurts (film grain, fine coloured text).
+   */
   highest: 1,
   /**
    * The lowest quality tried at full size. Quality is the first lever: fewer pixels come
@@ -158,6 +161,29 @@ async function shrinkToFit(
  * rather than bisects. The encoder is injected so the search can be tested without a
  * canvas.
  */
+/**
+ * The finest save above the usual quality that still fits `limit`, found in a few steps
+ * between the usual quality and the highest; undefined when none of them fits.
+ */
+export async function finestThatFits(
+  encode: (quality: number) => Promise<Blob>,
+  limit: number,
+  steps = 3,
+): Promise<{ blob: Blob; quality: number } | undefined> {
+  let found: { blob: Blob; quality: number } | undefined;
+  let low: number = QUALITY.max;
+  let high: number = QUALITY.highest;
+  for (let step = 0; step < steps; step++) {
+    const quality = (low + high) / 2;
+    const blob = await encode(quality);
+    if (blob.size <= limit) {
+      found = { blob, quality };
+      low = quality;
+    } else high = quality;
+  }
+  return found;
+}
+
 export async function compressToTarget(
   options: CompressionOptions,
   encode: Encoder,

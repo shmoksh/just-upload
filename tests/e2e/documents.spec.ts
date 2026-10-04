@@ -1,6 +1,15 @@
 import { inflateRawSync } from 'node:zlib';
 import type { Page } from '@playwright/test';
-import { dialog, expect, fixture, received, selectedImage, test, toast } from './fixtures';
+import {
+  dialog,
+  expect,
+  fixture,
+  received,
+  receiptsFor,
+  selectedImage,
+  test,
+  toast,
+} from './fixtures';
 
 // PDFs and spreadsheets, checked with readers independent of the code that wrote them:
 // PDF.js (in Node) for PDFs, and a small ZIP reader here for Excel workbooks.
@@ -164,24 +173,48 @@ test.describe('PDFs', () => {
 });
 
 test.describe('spreadsheets', () => {
+  const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
   test('an Excel workbook becomes a CSV file, after asking which sheet when it has several', async ({
     site,
   }) => {
-    await site.setInputFiles(
-      '#csv',
-      fixture(
-        'two-sheets.xlsx',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      ),
-    );
-    await expect(dialog(site)).toContainText('“People”');
-    await dialog(site).getByRole('button', { name: 'Use the first sheet' }).click();
+    await site.setInputFiles('#csv', fixture('two-sheets.xlsx', XLSX_TYPE));
+    await expect(dialog(site)).toContainText('Your workbook has 2 sheets');
+    const sheets = dialog(site).getByRole('combobox', { name: 'Sheet to use' });
+    await expect(sheets.locator('option')).toHaveText(['People', 'Totals']);
+    await dialog(site).getByRole('button', { name: 'Use this sheet' }).click();
     const receipt = await received(site, 'csv');
     expect(receipt.files[0]).toMatchObject({ name: 'two-sheets.csv', type: 'text/csv' });
     // Codes keep their leading zeros; names keep their accents.
     expect((await chosenBytes(site, '#csv')).toString('utf8')).toBe(
       'Name,Code,Amount\nZoë,00123,1234.5\nArjun,04567,99',
     );
+  });
+
+  test('the sheet that was chosen is the one the website gets', async ({ site }) => {
+    await site.setInputFiles('#csv', fixture('two-sheets.xlsx', XLSX_TYPE));
+    await dialog(site).getByRole('combobox', { name: 'Sheet to use' }).selectOption('Totals');
+    await dialog(site).getByRole('button', { name: 'Use this sheet' }).click();
+    await received(site, 'csv');
+    expect((await chosenBytes(site, '#csv')).toString('utf8')).toBe('Total,1333.5');
+    await expect(toast(site)).toContainText('One sheet');
+  });
+
+  test('formulas become their saved results; a workbook without any is left alone', async ({
+    site,
+  }) => {
+    await site.setInputFiles('#csv', fixture('formulas-saved.xlsx', XLSX_TYPE));
+    expect((await received(site, 'csv')).files[0]).toMatchObject({ name: 'formulas-saved.csv' });
+    expect((await chosenBytes(site, '#csv')).toString('utf8')).toBe(
+      'Item,Price,Qty,Total\nPen,2.5,4,10\nBook,12,2,24\nSum,,,34',
+    );
+    // Written by a script, never calculated: the totals would come out empty.
+    const unsaved = fixture('formulas-unsaved.xlsx', XLSX_TYPE);
+    await site.setInputFiles('#csv', unsaved);
+    await expect(toast(site)).toContainText('formulas have no saved results');
+    await expect
+      .poll(async () => (await receiptsFor(site, 'csv')).at(-1)?.files[0])
+      .toMatchObject({ name: 'formulas-unsaved.xlsx', size: unsaved.buffer.length });
   });
 
   test('a CSV file becomes an Excel workbook, keeping codes as text and numbers as numbers', async ({

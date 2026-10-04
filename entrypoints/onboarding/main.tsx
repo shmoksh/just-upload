@@ -564,18 +564,18 @@ function Private() {
 
 const FEATURES: { title: string; text: string; visual: ReactNode }[] = [
   {
-    title: 'Any format, accepted.',
+    title: 'Wrong format, fixed.',
     text: 'iPhone HEIC, WebP, AVIF, TIFF scans, SVG logos and more become exactly the format the website takes.',
     visual: <AnyFormat />,
   },
   {
-    title: 'Fits any size limit.',
+    title: 'Too large, made to fit.',
     text: 'Made smaller to fit, at full size whenever it can. If a photo truly needs fewer pixels, it asks first, and keeps as many as fit.',
     visual: <FitsLimit />,
   },
   {
     title: 'PDFs and spreadsheets too.',
-    text: 'A photo becomes a PDF, a PDF becomes a JPG, a big PDF gets smaller, and Excel becomes CSV, or back.',
+    text: 'A photo becomes a PDF, a PDF becomes a JPG, a big PDF gets smaller, and the Excel sheet you choose becomes CSV, or back.',
     visual: <Documents />,
   },
   {
@@ -717,7 +717,7 @@ const TRUST = [
   { icon: 'lock', title: 'Private by design', text: 'Your files never leave your computer' },
   { icon: 'check', title: 'Free', text: 'No account, no sign-up' },
   { icon: 'shield', title: 'No tracking', text: 'Not a single analytics call' },
-  { icon: 'bolt', title: 'About a second', text: 'On any website, as you upload' },
+  { icon: 'bolt', title: 'About a second', text: 'Right on the website, as you upload' },
 ] as const;
 
 /** In numbers. Formats: 12 kinds of image, PDF, CSV and two Excel formats. */
@@ -725,7 +725,7 @@ const CLAIMS = [
   { figure: '0', text: 'files sent to us. Everything happens on your computer.' },
   { figure: '16', text: 'file formats read: photos, scans, PDFs and spreadsheets.' },
   { figure: '140+', text: 'ways websites word their upload rules, understood.' },
-  { figure: '97%', text: 'of the quality kept or better, or it asks you first.' },
+  { figure: '97%', text: 'of the quality kept when a file has to get smaller, or it asks first.' },
 ];
 
 const PLACES = [
@@ -743,6 +743,8 @@ function Welcome() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   useEffect(() => {
     document.body.classList.add('grain');
+    // Opened at a section, as the popup's "Fix a file yourself" does: go straight there.
+    if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   }, []);
 
   return (
@@ -770,7 +772,7 @@ function Welcome() {
               transition={{ duration: 0.6, ease: EASE }}
             >
               <span className="pulse" aria-hidden="true" />
-              Installed. Ready on every website.
+              Installed. Ready whenever you upload.
             </m.p>
             <m.h1
               id="hero-title"
@@ -779,7 +781,7 @@ function Welcome() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease: EASE, delay: 0.05 }}
             >
-              Uploads that <em>just work.</em>
+              Fix rejected uploads <em>as you upload.</em>
             </m.h1>
             <m.p
               className="lead"
@@ -787,9 +789,9 @@ function Welcome() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease: EASE, delay: 0.14 }}
             >
-              When a website says no to your photo, PDF or spreadsheet, {PRODUCT_NAME} quietly makes
-              a copy it accepts, right on your computer, in about a second. You keep uploading the
-              way you always do.
+              When a website says “file too large” or “unsupported format” to your photo, PDF or
+              spreadsheet, {PRODUCT_NAME} quietly makes a copy it accepts, right on your computer,
+              in about a second. You keep uploading the way you always do.
             </m.p>
             <m.div
               className="hero-actions"
@@ -918,7 +920,9 @@ function Welcome() {
               </h2>
               <p className="block-lead">
                 Type a rule the way a website words it, then choose a file or one of our samples.
-                You’ll see exactly what the website would get. Nothing leaves this computer.
+                You’ll see exactly what the website would get, and can save it: that is also how to
+                fix a file yourself when a website never states its rules. Nothing leaves this
+                computer.
               </p>
             </header>
           </Reveal>

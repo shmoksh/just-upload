@@ -521,6 +521,24 @@ describe('streaming TIFF decoding', () => {
     expect(Array.from(decoded.pixels)).toEqual(rgbaOf(data, 3));
   });
 
+  it('knows a second page from a preview, in TIFF and BigTIFF', async () => {
+    const page = { width: 5, height: 7, samples: 3, bits: 8, photometric: 2 };
+    const data = samplesOf(5, 7, 3);
+    for (const big of [false, true]) {
+      const twoPages = await decodeTiffStream(
+        writeTiff({ ...page, data, big, secondPage: true }),
+        full,
+      );
+      expect(twoPages.multipleImages).toBe(true);
+      expect(Array.from(twoPages.pixels)).toEqual(rgbaOf(data, 3));
+      const withPreview = await decodeTiffStream(
+        writeTiff({ ...page, data, big, previewFirst: true }),
+        full,
+      );
+      expect(withPreview.multipleImages).toBe(false);
+    }
+  });
+
   it('reads separate colour planes, 16-bit samples with alpha, and PackBits', async () => {
     const data = samplesOf(4, 3, 3);
     const planar = await decodeTiffStream(
