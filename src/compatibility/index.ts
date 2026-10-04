@@ -7,6 +7,7 @@ import type {
   UploadRequirements,
 } from '../models';
 import {
+  carriesDpi,
   FORMATS,
   formatFromExtension,
   formatFromMime,
@@ -117,17 +118,22 @@ export function mightNeedWork(
   if (format === 'pdf') return false;
   if (requirements.minBytes !== undefined && file.size < safeMinimum(requirements.minBytes))
     return true;
+  // The DPI a JPEG or PNG records is in its header: read it to know.
+  if (requirements.dpi && carriesDpi(format)) return true;
   return allowedOutputs(requirements).length > 0 && hasDimensionRules(requirements);
 }
 
 /** Every way this image fails the field's rules, not just the first. */
 export function evaluateCompatibility(
-  info: Pick<ImageInfo, 'format' | 'width' | 'height' | 'bytes'>,
+  info: Pick<ImageInfo, 'format' | 'width' | 'height' | 'bytes' | 'dpi'>,
   requirements: UploadRequirements,
 ): CompatibilityIssue[] {
   if (info.format === 'unknown' || !(info.bytes > 0)) return ['unknown'];
   const issues: CompatibilityIssue[] = [];
   if (!formatAllowed(info.format, requirements)) issues.push('unsupported-format');
+  // A file that records no DPI reads as 72 or 96 to whoever checks: not what was asked.
+  if (requirements.dpi && carriesDpi(info.format) && info.dpi !== requirements.dpi)
+    issues.push('wrong-dpi');
   if (requirements.maxBytes !== undefined && info.bytes > requirements.maxBytes)
     issues.push('too-large');
   if (requirements.minBytes !== undefined && info.bytes < safeMinimum(requirements.minBytes))

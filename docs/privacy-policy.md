@@ -36,6 +36,10 @@ any server, and it works offline.
 
 If you choose to send us a problem report (Settings → Problems → Copy report), we
 receive only the text you paste into your message, and use it only to fix the problem.
+Likewise, if you uninstall Just Upload, your browser may open a short, optional feedback
+form: nothing is sent with it, and we receive only what you choose to answer. The
+extension also remembers, on your device, whether you have answered its one-time
+suggestion to rate it.
 
 The only place your file goes is the website you chose to upload it to, exactly as it
 would without the extension. That website's own privacy policy applies to what it

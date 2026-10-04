@@ -120,8 +120,17 @@ function receiptRow(receipt: Receipt): HTMLElement {
       receipt.from && receipt.to && arrow(),
       receipt.to && tag(receipt.to.name, receipt.to.size, true),
     ),
-    receipt.pixels &&
-      h('p', { class: 'ju-pixels' }, `${receipt.pixels.from} → ${receipt.pixels.to} pixels`),
+    Boolean(receipt.pixels || receipt.dpi) &&
+      h(
+        'p',
+        { class: 'ju-pixels' },
+        [
+          receipt.pixels && `${receipt.pixels.from} → ${receipt.pixels.to} pixels`,
+          receipt.dpi && `${receipt.dpi} DPI`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      ),
   );
 }
 

@@ -14,6 +14,9 @@ The first public release.
   forms ask, are met too.
 - **Reads the rules the way websites write them:** "max 2 MB", "upto 2MB", "should not
   exceed 500KB", "between 20 KB and 50 KB".
+- **Passport and exam photos:** printed sizes such as "3.5 cm × 4.5 cm" or "2 × 2 inches"
+  and a DPI such as "200 DPI": cropped to that shape after asking, sized for the DPI, and
+  saved with it.
 - **Never a surprise.** Cropping, a white background, a visible drop in quality or fewer
   pixels is always your choice, and every note says how much quality was kept.
 - **Safe by default.** If anything goes wrong, the website gets your original file.

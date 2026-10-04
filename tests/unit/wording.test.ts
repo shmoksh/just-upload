@@ -31,13 +31,20 @@ function read(text: string): Expected {
     'exactWidth',
     'exactHeight',
     'aspectRatio',
+    'printWidth',
+    'printHeight',
+    'dpi',
   ] as const;
   const confident = new Set(
     parsed.sources.filter((source) => source.confidence >= 0.85).map((source) => source.field),
   );
+  // A printed size gives the shape, and with a DPI the pixel size, without saying them.
+  const printed = confident.has('printWidth') && confident.has('printHeight');
+  const fromPrint = new Set(['aspectRatio', 'exactWidth', 'exactHeight']);
   for (const field of fields) {
     const value = parsed[field];
-    if (value !== undefined && confident.has(field)) out[field] = value;
+    if (value !== undefined && (confident.has(field) || (printed && fromPrint.has(field))))
+      out[field] = value;
   }
   if (parsed.acceptedMimeTypes.length) out.acceptedMimeTypes = [...parsed.acceptedMimeTypes].sort();
   return out;
@@ -236,6 +243,49 @@ const cases: [string, Expected][] = [
   ],
   ['Upload a GIF (max 1 MB)', { acceptedMimeTypes: ['image/gif'], maxBytes: 1 * MB }],
 
+  // Printed sizes and DPI, as passport and exam forms give them
+  ['Photo size 3.5 cm × 4.5 cm', { printWidth: 35, printHeight: 45, aspectRatio: 35 / 45 }],
+  ['35 x 45 mm passport photo', { printWidth: 35, printHeight: 45, aspectRatio: 35 / 45 }],
+  ['Photo 2 × 2 inches', { printWidth: 50.8, printHeight: 50.8, aspectRatio: 1 }],
+  ['2" x 2" photo', { printWidth: 50.8, printHeight: 50.8, aspectRatio: 1 }],
+  [
+    'Photo: 3.5 cm x 4.5 cm, 200 DPI',
+    {
+      printWidth: 35,
+      printHeight: 45,
+      dpi: 200,
+      exactWidth: 276,
+      exactHeight: 354,
+      aspectRatio: 276 / 354,
+    },
+  ],
+  [
+    'Photo 51 x 51 mm, 300 dpi',
+    {
+      printWidth: 51,
+      printHeight: 51,
+      dpi: 300,
+      exactWidth: 602,
+      exactHeight: 602,
+      aspectRatio: 1,
+    },
+  ],
+  ['Scan at 300 dpi', { dpi: 300 }],
+  ['Resolution: 200-300 DPI', { dpi: 200 }],
+  // Pixels the form states win over its printed size: they rarely agree exactly.
+  [
+    'JPG, 200 × 230 pixels, 3.5 cm × 4.5 cm, 20 KB to 50 KB',
+    {
+      acceptedMimeTypes: [JPG],
+      exactWidth: 200,
+      exactHeight: 230,
+      printWidth: 35,
+      printHeight: 45,
+      minBytes: 20 * KB,
+      maxBytes: 50 * KB,
+    },
+  ],
+
   // Not rules
   ['Uploading 10 photos makes your profile 5x more visible', {}],
   ['Our app compresses photos by up to 80%', {}],
@@ -245,7 +295,7 @@ const cases: [string, Expected][] = [
   ['For best results, use images at least 1080px wide', {}],
   ['We will automatically resize images larger than 4000px', {}],
   ['Total upload size must not exceed 20 MB', {}],
-  ['Photo size 3.5 cm × 4.5 cm', {}],
+  ['Upload in 3 x 4 in size', {}],
   ['HEIC files are not supported', {}],
 ];
 

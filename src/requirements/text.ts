@@ -41,8 +41,10 @@ const QUALIFIER =
   /(?<min>\bno (?:smaller|less|fewer) than\b|\bnot (?:be )?(?:smaller|less) than\b|\bmin(?:imum)?\b\.?|\bat least\b|>=?|≥)|(?<max>\bno (?:more|larger|bigger|greater) than\b|\bnot (?:be )?(?:more|larger|bigger|greater) than\b|\b(?:not|never|cannot|can't|mustn't|shouldn't|don't|doesn't|won't) (?:to )?exceed(?:ing)?\b|\bnot over\b|\bmax(?:imum)?\b\.?|\bup ?to\b|\bless than\b|\bunder\b|\bbelow\b|\bat most\b|\bsmaller than\b|\blimit(?:ed to)?\b|\bwithin\b|<=?|≤)|(?<above>\bmore than\b|\bover\b|\b(?:larger|bigger|greater) than\b|\bexceed(?:s|ing)?\b)/gi;
 
 const PIXELS = String.raw`(?:\s*(?:px|pixels?))?`;
+/** A printed size ("35 x 45 mm") is not a pixel size. */
+const PRINTED_AFTER = String.raw`(?!\s*(?:mm|cm|millimet|centimet|inch|in\b|"|″|''))`;
 const DIMENSION_PAIR = new RegExp(
-  String.raw`(?<![\d.])(\d{2,5})${PIXELS}\s*(?:[x×✕*]|\bby\b)\s*(\d{2,5})${PIXELS}(?![\d])`,
+  String.raw`(?<![\d.])(\d{2,5})${PIXELS}\s*(?:[x×✕*]|\bby\b)\s*(\d{2,5})${PIXELS}(?![\d])${PRINTED_AFTER}`,
   'gi',
 );
 const NAMED_DIMENSION =
@@ -55,6 +57,20 @@ const SIDE_DIMENSION =
   /\b(\d{2,5})\s*(?:px|pixels?)\s+(?:on|along|for)\s+(?:the\s+|each\s+|both\s+|all\s+)?(?:shortest|shorter|longest|longer|each|every|both|all)?\s*(?:sides?|edges?|dimensions?)\b/gi;
 const BOUNDING_DIMENSION =
   /(\bmax(?:imum)?\b\.?|\bup ?to\b|\bat most\b|\bno (?:larger|bigger) than\b|\bmin(?:imum)?\b\.?|\bat least\b)\s*(\d{2,5})\s*(?:px|pixels?)\b(?!\s*(?:[x×✕*]|by\b|wide|high|tall))/gi;
+
+/**
+ * A printed size: "3.5 cm × 4.5 cm", "35 x 45 mm", "2 × 2 inches", '2" x 2"'. The unit
+ * after the second number is required; "in" counts only when no word follows it ("2 x 2
+ * in", not "2 x 2 in size").
+ */
+const LENGTH_UNIT = String.raw`(cm|mm|centimet(?:er|re)s?|millimet(?:er|re)s?|inch(?:es)?|in\b(?!\s*[a-z]{2,})\.?|"|″|'')`;
+const PRINT_PAIR = new RegExp(
+  String.raw`(?<![\d.])(\d{1,3}(?:[.,]\d{1,2})?)\s*${LENGTH_UNIT}?\s*(?:[x×✕*]|\bby\b)\s*(\d{1,3}(?:[.,]\d{1,2})?)\s*${LENGTH_UNIT}`,
+  'gi',
+);
+/** "200 DPI", "300 dpi", "200 pixels per inch", or a range ("200–300 DPI", the lower). */
+const DPI =
+  /(?<![\d.])(\d{2,4})(?:\s*(?:-|–|to)\s*\d{2,4})?\s*(?:dpi|d\.p\.i\.?|ppi|(?:pixels?|dots?) per inch)\b/gi;
 
 const RATIO = /(?<![\d:.])(\d{1,2}(?:\.\d{1,2})?)\s*:\s*(\d{1,2}(?:\.\d{1,2})?)(?![\d:])/g;
 const COMMON_RATIOS = new Set([
@@ -304,6 +320,32 @@ function parseDimensions(
   }
 }
 
+const MILLIMETRES: Record<string, number> = { cm: 10, mm: 1, in: 25.4 };
+const millimetres = (value: string, unit: string) => {
+  const name = /^c/i.test(unit) ? 'cm' : /^m/i.test(unit) ? 'mm' : 'in';
+  return Math.round(parseNumber(value) * MILLIMETRES[name]! * 100) / 100;
+};
+
+/** Printed photo sizes and the DPI they are to be saved at. */
+function parsePrint(
+  clause: string,
+  add: (field: NumericField, value: number, factor?: number) => void,
+): void {
+  for (const match of clause.matchAll(PRINT_PAIR)) {
+    const [, width, widthUnit, height, heightUnit] = match;
+    const w = millimetres(width!, widthUnit ?? heightUnit!);
+    const h = millimetres(height!, heightUnit!);
+    // A photo or a document page, from a stamp-sized photo up to A4.
+    if (!(w >= 10 && h >= 10 && w <= 300 && h <= 300)) continue;
+    add('printWidth', w);
+    add('printHeight', h);
+  }
+  for (const match of clause.matchAll(DPI)) {
+    const dpi = Number(match[1]);
+    if (dpi >= 50 && dpi <= 1200) add('dpi', dpi);
+  }
+}
+
 function parseAspect(
   clause: string,
   add: (field: NumericField, value: number, factor?: number) => void,
@@ -385,6 +427,7 @@ export function parseTextEvidence(
     parseSizes(clause, add);
     parseDimensions(clause, add);
     parseAspect(clause, add);
+    parsePrint(clause, add);
     parseFormats(clause, clauseConfidence, source, sources);
   }
   return sources;

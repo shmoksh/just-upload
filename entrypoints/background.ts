@@ -8,6 +8,7 @@ import {
   STATS_KEY,
   loadSessionCount,
 } from '../src/storage/stats';
+import { UNINSTALL_FORM_URL } from '../src/feedback';
 import { LIMITS } from '../src/security/limits';
 import { loadProblems, normalizeProblem, PROBLEMS_KEY, withProblem } from '../src/storage/problems';
 import { isSerializedFile } from '../src/utils/files';
@@ -185,6 +186,9 @@ export default defineBackground(() => {
       return true;
     },
   );
+
+  // An optional feedback form opens if someone uninstalls; nothing is sent with it.
+  if (UNINSTALL_FORM_URL) void browser.runtime.setUninstallURL(UNINSTALL_FORM_URL).catch(() => {});
 
   browser.runtime.onInstalled.addListener((details) => {
     if (details.reason === 'install')

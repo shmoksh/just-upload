@@ -459,6 +459,7 @@ const PHRASES = [
   { before: 'Image ', key: 'upto 2MB', after: '', reads: 'max 2 MB' },
   { before: 'Photo size should be ', key: 'between 20 KB and 50 KB', after: '', reads: '20–50 KB' },
   { before: '', key: 'JPG only', after: ', no PNG', reads: 'JPG' },
+  { before: 'Photo ', key: '3.5 cm × 4.5 cm, 200 DPI', after: '', reads: '276 × 354 · 200 DPI' },
 ];
 
 function ReadsRules() {
@@ -646,6 +647,12 @@ const CASES: Case[] = [
     chosen: '48 MP phone photo, 9.4 MB',
     site: 'File size should not exceed 500 KB',
     result: 'JPG, 476 KB, 2575 × 1931',
+    kind: 'ask',
+  },
+  {
+    chosen: 'Phone photo',
+    site: 'Passport photo 3.5 cm × 4.5 cm, 200 DPI',
+    result: 'You choose the crop: 276 × 354, 200 DPI',
     kind: 'ask',
   },
   {

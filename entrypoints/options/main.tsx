@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
 import { LOOKS_THE_SAME } from '../../src/decision';
+import { reviewPageUrl } from '../../src/feedback';
 import type { TransformChange } from '../../src/models';
 import { clearProblems } from '../../src/storage/problems';
 import { resetStats } from '../../src/storage/stats';
@@ -225,9 +226,19 @@ function Problems() {
   );
 }
 
+/** Where this copy can be rated: only once it is installed from a store. */
+function useReviewPage(): string | undefined {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    void reviewPageUrl().then(setUrl);
+  }, []);
+  return url;
+}
+
 function Options() {
   const { settings, update, ready, error } = useSettings();
   const { stats } = useStats();
+  const reviewPage = useReviewPage();
   const toggle = (key: 'enabled' | 'showNotifications' | 'askBeforeQualityChanges') => () =>
     void update({ [key]: !settings[key] });
 
@@ -446,6 +457,12 @@ function Options() {
               <span className="row-title">Privacy policy</span>
               <Icon name="external" size={16} />
             </a>
+            {reviewPage && (
+              <a className="row link-row" href={reviewPage} target="_blank" rel="noreferrer">
+                <span className="row-title">Rate Just Upload</span>
+                <Icon name="external" size={16} />
+              </a>
+            )}
             <a className="row link-row" href="licenses/THIRD_PARTY_NOTICES.txt">
               <span className="row-title">Open-source notices</span>
               <Icon name="arrow" size={16} />

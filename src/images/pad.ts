@@ -50,7 +50,8 @@ function padPng(bytes: Uint8Array<ArrayBuffer>, missing: number): Uint8Array<Arr
 }
 
 let table: Uint32Array | undefined;
-function crc32(data: Uint8Array): number {
+/** The CRC every PNG chunk ends with. */
+export function crc32(data: Uint8Array): number {
   table ??= Uint32Array.from({ length: 256 }, (_, n) => {
     for (let k = 0; k < 8; k++) n = n & 1 ? 0xedb88320 ^ (n >>> 1) : n >>> 1;
     return n >>> 0;

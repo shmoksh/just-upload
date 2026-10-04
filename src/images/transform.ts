@@ -7,15 +7,17 @@ import type {
   TransformResult,
   UploadRequirements,
 } from '../models';
-import { safeMinimum } from '../compatibility';
+import { evaluateCompatibility, safeMinimum } from '../compatibility';
 import { decide, statesPixelSize, transformOptions } from '../decision';
-import { isLossy, isOutputFormat, keepsTransparency, mimeOf } from '../formats';
+import { carriesDpi, isLossy, isOutputFormat, keepsTransparency, mimeOf } from '../formats';
 import { fail, type ErrorCode } from '../utils/errors';
 import { ICO_MAX_SIZE } from './codecs/ico';
 import { compressToTarget, QUALITY } from './compress';
 import { context2d, decodeImage, type DecodedImage } from './decode';
+import { readDpi, withDpi } from './dpi';
 import { encodeCanvas } from './encode';
 import { calculateDimensions, normalizeCrop, outputFilename } from './geometry';
+import { detectFormat, displaySize, parseHeader } from './headers';
 import { assertDimensions } from '../security/limits';
 import { qualityKept } from './quality';
 import type { Progress } from './stream/types';
@@ -180,6 +182,13 @@ export async function transformDecoded(
         encodeCanvas(await render(width, height), outputFormat, quality),
     );
 
+    // The DPI the site asks for goes in the file's header; the pixels are already final.
+    const dpi = rules.dpi && carriesDpi(outputFormat) ? rules.dpi : undefined;
+    const blob =
+      dpi && carriesDpi(outputFormat)
+        ? await withDpi(encoded.blob, outputFormat, dpi)
+        : encoded.blob;
+
     const resizedToFit = encoded.width < size.width || encoded.height < size.height;
     const sizeLimited = resizedToFit || (isLossy(outputFormat) && encoded.quality < QUALITY.max);
     // A lossless file holds exactly the pixels drawn, so those are compared; a GIF's
@@ -205,7 +214,8 @@ export async function transformDecoded(
     if (info.animated) changes.push('first-frame');
     if ((info.pages ?? 1) > 1) changes.push('first-page');
     if ((info.orientation ?? 1) !== 1) changes.push('orientation-applied');
-    const file = new File([encoded.blob], outputFilename(original.name, outputFormat), {
+    if (dpi && info.dpi !== dpi) changes.push('dpi-set');
+    const file = new File([blob], outputFilename(original.name, outputFormat), {
       type: mime,
       lastModified: original.lastModified,
     });
@@ -223,6 +233,7 @@ export async function transformDecoded(
       qualityKept: quality,
       resizedToFit,
       sizeLimited,
+      ...(dpi ? { dpi } : {}),
     };
   } finally {
     release(surface);
@@ -264,12 +275,62 @@ export async function prepareImage(
   raster?: Blob,
   progress?: Progress,
 ): Promise<PrepareOutcome> {
+  const dpiOnly = await setDpiOnly(file, requirements);
+  if (dpiOnly) return { kind: 'fixed', result: dpiOnly };
   const decoded = await decodeImage(file, raster, progress, !statesPixelSize(requirements));
   try {
     return await prepareDecoded(decoded, file, requirements);
   } finally {
     decoded.bitmap.close();
   }
+}
+
+/**
+ * When the DPI a JPEG or PNG records is the one thing wrong, only its header changes:
+ * no decoding, no new compression, every pixel as it was.
+ */
+async function setDpiOnly(
+  file: File,
+  requirements: UploadRequirements,
+): Promise<TransformResult | undefined> {
+  const { dpi } = requirements;
+  if (!dpi) return undefined;
+  const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
+  const format = detectFormat(head);
+  if (!carriesDpi(format)) return undefined;
+  let header;
+  try {
+    header = file.size <= head.length ? parseHeader(head) : parseHeader(head, { partial: true });
+  } catch {
+    return undefined;
+  }
+  if (!header) return undefined;
+  const { width, height } = displaySize(header);
+  const info = { format, width, height, bytes: file.size, dpi: readDpi(head, format) };
+  const issues = evaluateCompatibility(info, requirements);
+  if (issues.length !== 1 || issues[0] !== 'wrong-dpi') return undefined;
+  const blob = await withDpi(file, format, dpi);
+  if (evaluateCompatibility({ ...info, bytes: blob.size, dpi }, requirements).length)
+    return undefined;
+  return {
+    file: new File([blob], file.name, {
+      type: file.type || mimeOf(format),
+      lastModified: file.lastModified,
+    }),
+    changes: ['dpi-set'],
+    originalSize: file.size,
+    finalSize: blob.size,
+    originalWidth: width,
+    originalHeight: height,
+    finalWidth: width,
+    finalHeight: height,
+    originalFormat: format,
+    finalFormat: format,
+    qualityKept: 100,
+    resizedToFit: false,
+    sizeLimited: false,
+    dpi,
+  };
 }
 
 /** The same, for an image already decoded (or a PDF page already drawn). */

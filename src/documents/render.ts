@@ -44,8 +44,8 @@ export interface RenderedPage {
   pages: number;
 }
 
-/** Draws page `index` (from 0) on white, as a PNG. */
-export async function renderPdfPage(file: Blob, index = 0): Promise<RenderedPage> {
+/** Draws page `index` (from 0) on white, as a PNG, at `dpi` (the site's, if it gave one). */
+export async function renderPdfPage(file: Blob, index = 0, dpi = DPI): Promise<RenderedPage> {
   if (file.size > MAX_PDF_BYTES) fail('too-large-to-process');
   const lib = await pdfjs();
   const missing = new Set<string>();
@@ -72,7 +72,8 @@ export async function renderPdfPage(file: Blob, index = 0): Promise<RenderedPage
     const pages = document.numPages;
     const page = await document.getPage(Math.min(Math.max(1, index + 1), pages));
     const base = page.getViewport({ scale: 1 });
-    const scale = Math.min(DPI / 72, Math.sqrt(MAX_PIXELS / (base.width * base.height)));
+    const dots = Math.min(600, Math.max(72, dpi));
+    const scale = Math.min(dots / 72, Math.sqrt(MAX_PIXELS / (base.width * base.height)));
     const viewport = page.getViewport({ scale });
     canvas.width = Math.max(1, Math.floor(viewport.width));
     canvas.height = Math.max(1, Math.floor(viewport.height));

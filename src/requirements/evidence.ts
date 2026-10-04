@@ -13,6 +13,9 @@ export const NUMERIC_FIELDS = [
   'exactWidth',
   'exactHeight',
   'aspectRatio',
+  'printWidth',
+  'printHeight',
+  'dpi',
 ] as const;
 export type NumericField = (typeof NUMERIC_FIELDS)[number];
 
@@ -56,6 +59,22 @@ export function resolve(
     );
     if (values.size === 1) result[field] = [...values][0] as number;
   }
+  derivePrintSize(result);
   result.confidence = trusted.reduce((max, item) => Math.max(max, item.confidence), 0);
   return result;
+}
+
+/**
+ * A printed size ("3.5 cm × 4.5 cm") is a shape; with a DPI it is also a pixel size
+ * (3.5 × 4.5 cm at 200 DPI is 276 × 354). A pixel size the site states itself always
+ * wins: forms often give both, and they rarely agree exactly.
+ */
+function derivePrintSize(result: UploadRequirements): void {
+  const { printWidth, printHeight, dpi } = result;
+  if (!printWidth || !printHeight || result.exactWidth || result.exactHeight) return;
+  if (dpi) {
+    result.exactWidth = Math.round((printWidth / 25.4) * dpi);
+    result.exactHeight = Math.round((printHeight / 25.4) * dpi);
+    result.aspectRatio = result.exactWidth / result.exactHeight;
+  } else result.aspectRatio ??= printWidth / printHeight;
 }

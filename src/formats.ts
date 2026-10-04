@@ -164,6 +164,11 @@ export function isOutputFormat(format: FileFormat | FileOutput): format is Outpu
   return format !== 'unknown' && Boolean(FORMATS[format].output);
 }
 
+/** The formats whose DPI Just Upload can read and save (JFIF/EXIF and pHYs). */
+export function carriesDpi(format: FileFormat | FileOutput): format is 'jpeg' | 'png' {
+  return format === 'jpeg' || format === 'png';
+}
+
 export function isSheet(format: FileFormat | FileOutput): format is SheetFormat {
   return format !== 'unknown' && FORMATS[format].kind === 'sheet';
 }

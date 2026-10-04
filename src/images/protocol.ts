@@ -69,6 +69,9 @@ export function sanitizeRequirements(value: unknown): UploadRequirements {
     'exactWidth',
     'exactHeight',
     'aspectRatio',
+    'printWidth',
+    'printHeight',
+    'dpi',
   ] as const) {
     const number = positive(input[field]);
     if (number !== undefined) result[field] = number;

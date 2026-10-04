@@ -15,6 +15,7 @@ const CHANGES: readonly TransformChange[] = [
   'background-added',
   'first-frame',
   'orientation-applied',
+  'dpi-set',
 ];
 
 const count = (value: unknown) =>

@@ -121,7 +121,7 @@ async function draw(job: PoolJob): Promise<Drawn> {
   if (format !== 'pdf') return {};
   const rules = sanitizeRequirements(job.requirements);
   if (formatAllowed('pdf', rules) || !allowedOutputs(rules).length) return {};
-  const { image, pages } = await renderPdfPage(job.file);
+  const { image, pages } = await renderPdfPage(job.file, 0, rules.dpi);
   return { raster: image, pages };
 }
 

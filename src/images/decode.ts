@@ -4,6 +4,7 @@ import { fail, ProcessingError } from '../utils/errors';
 import { managedBitmap } from './color';
 import { decodeJxl } from './codecs/jxl';
 import { decodeTiff } from './codecs/tiff';
+import { readDpi } from './dpi';
 import {
   detectFormat,
   displaySize,
@@ -187,6 +188,7 @@ export async function decodeImage(
         streamed.bitmap.close();
         fail('too-large-to-process');
       }
+      streamed.info.dpi = readDpi(head, format);
       return streamed;
     } catch (error) {
       if (error instanceof ProcessingError && error.code !== 'failed') throw error;
@@ -251,6 +253,7 @@ export async function decodeImage(
         transparent: mayHaveAlpha && hasTransparentPixel(bitmap),
         animated: header.animated || multipleImages,
         orientation: header.orientation,
+        dpi: readDpi(head, header.format),
       },
       scale: bitmap.width / width,
     };

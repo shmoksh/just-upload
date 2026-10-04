@@ -28,7 +28,7 @@ happens; if it doesn't, Just Upload makes a copy that fits before the website se
 - **Fits any size limit.** At full size whenever it can; it asks before using fewer
   pixels, and keeps as many as fit.
 - **Reads the rules like you do.** "upto 2MB", "should not exceed 500 KB", "between 20
-  and 50 KB".
+  and 50 KB", "3.5 × 4.5 cm, 200 DPI".
 - **Never a surprise.** Anything you'd notice is your choice, and your original is never
   changed.
 

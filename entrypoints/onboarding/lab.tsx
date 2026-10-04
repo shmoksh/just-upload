@@ -34,6 +34,7 @@ const PRESETS = [
   'Images up to 1920 × 1920 pixels',
   'WebP only',
   'Square photo, 600 × 600 pixels',
+  'Passport photo 3.5 cm × 4.5 cm, 200 DPI',
 ];
 const EASE = [0.22, 1, 0.36, 1] as const;
 

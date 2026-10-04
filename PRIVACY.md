@@ -32,6 +32,8 @@ Only on your device, in the extension's local storage:
   happened, what went wrong (for example "the file could not be read"), the file's
   format and its size rounded to two figures, and the upload field's rules in Just
   Upload's own words (for example "JPG · max 2 MB").
+- Whether you have answered the one-time suggestion to rate Just Upload, so it is not
+  shown again.
 
 Just Upload never stores files, file names, website addresses, page text or upload
 history. Prepared files exist only in memory for as long as it takes to hand them to
@@ -50,6 +52,12 @@ This is enforced, not just promised:
 - The extension contains no code that sends data to a server, and loads no remote code.
 - Its own pages are blocked from connecting to any server.
 - It works fully offline once installed.
+
+## Ratings and feedback
+
+After Just Upload has helped you ten times, its popup suggests rating it in the store,
+once. If you uninstall it, your browser may open a short, optional feedback form. Neither
+sends anything about your files or your browsing; what you answer in the form is up to you.
 
 ## Permissions
 

@@ -2,6 +2,7 @@ import { animate, AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { browser } from 'wxt/browser';
+import { RATE_PROMPT_KEY, reviewPageUrl, shouldSuggestRating } from '../../src/feedback';
 import { Icon, LocalNote, MotionRoot, Toggle, Wordmark } from '../../src/ui/shared';
 import { useSettings, useStats } from '../../src/ui/use-settings';
 import '../../src/ui/pages.css';
@@ -49,6 +50,55 @@ function Count({ value }: { value: number }) {
     <span ref={node} className="count">
       0
     </span>
+  );
+}
+
+/**
+ * After Just Upload has helped ten times, once: a quiet suggestion to rate it in the
+ * store it came from. Gone for good once used or dismissed.
+ */
+function RatePrompt({ fixes }: { fixes: number }) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    if (!shouldSuggestRating(fixes, false)) return;
+    let live = true;
+    void Promise.all([reviewPageUrl(), browser.storage.local.get(RATE_PROMPT_KEY)])
+      .then(([page, stored]) => {
+        if (live && page && shouldSuggestRating(fixes, stored[RATE_PROMPT_KEY])) setUrl(page);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [fixes]);
+  if (!url) return null;
+  const answer = (value: 'rated' | 'dismissed') => {
+    setUrl(undefined);
+    void browser.storage.local.set({ [RATE_PROMPT_KEY]: value }).catch(() => {});
+  };
+  return (
+    <aside className="rate" aria-label="Rate Just Upload">
+      <Icon name="star" size={16} />
+      <p>Enjoying Just Upload? A rating helps others find it.</p>
+      <a
+        className="button small"
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => answer('rated')}
+      >
+        Rate it
+      </a>
+      <button
+        type="button"
+        className="icon-button"
+        aria-label="Not now"
+        title="Not now"
+        onClick={() => answer('dismissed')}
+      >
+        <Icon name="close" />
+      </button>
+    </aside>
   );
 }
 
@@ -150,6 +200,8 @@ function Popup() {
           {error}
         </p>
       )}
+
+      <RatePrompt fixes={stats.total} />
 
       <footer className="popup-foot">
         <LocalNote />

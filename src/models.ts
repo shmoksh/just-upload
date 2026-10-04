@@ -20,7 +20,10 @@ export type RequirementField =
   | 'maxHeight'
   | 'exactWidth'
   | 'exactHeight'
-  | 'aspectRatio';
+  | 'aspectRatio'
+  | 'printWidth'
+  | 'printHeight'
+  | 'dpi';
 
 /** One piece of evidence for a requirement, kept so every decision can be explained. */
 export interface RequirementSource {
@@ -45,6 +48,14 @@ export interface UploadRequirements {
   exactWidth?: number;
   exactHeight?: number;
   aspectRatio?: number;
+  /**
+   * A printed size, as passport and exam forms give it ("3.5 cm × 4.5 cm", "2 × 2
+   * inches"), in millimetres. On its own it is a shape; with `dpi`, a pixel size.
+   */
+  printWidth?: number;
+  printHeight?: number;
+  /** Pixels per inch the site asks for ("200 DPI"), saved in the file it gets. */
+  dpi?: number;
   confidence: number;
   sources: RequirementSource[];
 }
@@ -57,6 +68,8 @@ export interface ImageInfo {
   transparent: boolean;
   animated: boolean;
   orientation?: number;
+  /** The pixels per inch the file records, if it records any (JPEG and PNG). */
+  dpi?: number;
   /** A PDF's page count, when one of its pages becomes the image. */
   pages?: number;
   /** A workbook's sheet names, when one sheet becomes a CSV file. */
@@ -71,6 +84,7 @@ export type CompatibilityIssue =
   | 'too-large-dimensions'
   | 'wrong-aspect-ratio'
   | 'exact-dimensions-required'
+  | 'wrong-dpi'
   | 'unknown';
 
 export type DecisionAction = 'PASS_THROUGH' | 'AUTO_FIX' | 'USER_CONFIRMATION' | 'UNSAFE_TO_FIX';
@@ -124,7 +138,8 @@ export type TransformChange =
   | 'orientation-applied'
   | 'raised-to-minimum'
   | 'first-page'
-  | 'first-sheet';
+  | 'first-sheet'
+  | 'dpi-set';
 
 export interface TransformResult {
   file: File;
@@ -139,6 +154,8 @@ export interface TransformResult {
   finalFormat: FileOutput;
   /** How much of the original's look the file keeps, 0–100 (see images/quality.ts). */
   qualityKept: number;
+  /** The pixels per inch saved in the file, when the site asked for some. */
+  dpi?: number;
   /**
    * Fewer pixels than the site's own rules ask, to meet its file-size limit: used only
    * once the person agrees (see needsShrinkConsent).

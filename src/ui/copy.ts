@@ -48,6 +48,8 @@ export interface Receipt {
   noticeable: boolean;
   /** The pixel change, when the image was made smaller or larger: "3024 × 4032 → 2872 × 3829". */
   pixels?: { from: string; to: string };
+  /** The DPI saved in the file, when the site asked for one. */
+  dpi?: number;
 }
 
 export interface ToastCopy {
@@ -61,6 +63,15 @@ const qualityText = (low: number, high = low) =>
   low === high ? `Quality kept: ${low}%` : `Quality kept: ${low}–${high}%`;
 const percent = (low: number, high = low) => (low === high ? `${low}%` : `${low}–${high}%`);
 const pixels = (width: number, height: number) => `${width} × ${height}`;
+
+const trimmed = (value: number) => String(Math.round(value * 100) / 100);
+/** A printed size as a form gives it: "3.5 × 4.5 cm", or "2 × 2 in" for whole inches. */
+export function printSize(widthMm: number, heightMm: number): string {
+  const inches = [widthMm / 25.4, heightMm / 25.4];
+  if (inches.every((value) => Math.abs(value * 4 - Math.round(value * 4)) < 0.01))
+    return `${trimmed(inches[0]!)} × ${trimmed(inches[1]!)} in`;
+  return `${trimmed(widthMm / 10)} × ${trimmed(heightMm / 10)} cm`;
+}
 
 /** "HEIC → JPG · 5.8 MB → 1.8 MB · Quality kept: 98%" */
 export function successCopy(results: TransformResult[]): ToastCopy {
@@ -88,6 +99,14 @@ export function successCopy(results: TransformResult[]): ToastCopy {
   }
   const [result] = results;
   if (!result) return { title: 'Ready to upload' };
+  // Only the DPI the file records changed: the picture is exactly as it was.
+  if (result.dpi && result.changes.length && result.changes.every((c) => c === 'dpi-set')) {
+    return {
+      title: 'Ready to upload',
+      detail: `Set to ${result.dpi} DPI, nothing else changed`,
+      receipt: { note: `Set to ${result.dpi} DPI, nothing else changed`, noticeable: false },
+    };
+  }
   const parts: string[] = [];
   const converted = result.originalFormat !== result.finalFormat;
   if (converted) {
@@ -107,6 +126,7 @@ export function successCopy(results: TransformResult[]): ToastCopy {
   if (smaller) {
     parts.push(`${formatBytes(result.originalSize)} → ${formatBytes(result.finalSize)}`);
   }
+  if (result.dpi) parts.push(`${result.dpi} DPI`);
   // A spreadsheet's data is carried over whole; there is no look to measure.
   const measured = !isSheet(result.finalFormat);
   if (measured) parts.push(qualityText(result.qualityKept));
@@ -116,6 +136,7 @@ export function successCopy(results: TransformResult[]): ToastCopy {
   const receipt: Receipt = {
     quality: measured ? percent(result.qualityKept) : undefined,
     noticeable: measured && result.qualityKept < LOOKS_THE_SAME,
+    ...(result.dpi ? { dpi: result.dpi } : {}),
   };
   if (converted) {
     receipt.from = { name: formatLabel(result.originalFormat), size: before };
@@ -206,7 +227,10 @@ const LEAD: Record<
   ) => Omit<DialogCopy, 'notes' | 'decline'>
 > = {
   crop: (requirements) => ({
-    title: `This site needs ${shapeName(targetRatio(requirements) ?? 1)} photo`,
+    title:
+      requirements.printWidth && requirements.printHeight
+        ? `This site needs a ${printSize(requirements.printWidth, requirements.printHeight)} photo`
+        : `This site needs ${shapeName(targetRatio(requirements) ?? 1)} photo`,
     body: 'Drag to choose the part to keep.',
     confirm: 'Use this crop',
   }),
@@ -322,7 +346,10 @@ export function rulesSummary(requirements: UploadRequirements): string {
   if (exactWidth || exactHeight) parts.push(`${exactWidth ?? 'any'} × ${exactHeight ?? 'any'}`);
   if (minWidth || minHeight) parts.push(`at least ${minWidth ?? 'any'} × ${minHeight ?? 'any'}`);
   if (maxWidth || maxHeight) parts.push(`at most ${maxWidth ?? 'any'} × ${maxHeight ?? 'any'}`);
-  if (aspectRatio && !exactWidth) parts.push(`shape ${Number(aspectRatio.toFixed(3))} : 1`);
+  const { printWidth, printHeight, dpi } = requirements;
+  if (printWidth && printHeight) parts.push(printSize(printWidth, printHeight));
+  else if (aspectRatio && !exactWidth) parts.push(`shape ${Number(aspectRatio.toFixed(3))} : 1`);
+  if (dpi) parts.push(`${dpi} DPI`);
   return parts.join(' · ') || 'no rules found';
 }
 
